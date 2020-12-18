@@ -1,0 +1,165 @@
+/*
+option.ENABLE_SOFT_SHADOWS=Soft Shadows
+option.VARIABLE_PENUMBRA_SHADOWS=Variable Penumbra Shadows
+option.COLORED_SHADOWS=Colored Shadows
+option.PIXEL_SHADOWS=Pixel-Locked Shadows
+option.TEXTURE_RESOLUTION=Texture Resolution
+option.ATMOSPHERIC_SCATTERING=Atmospheric Scattering
+option.CREPUSCULAR_RAYS=Crepuscular Rays
+option.FORCE_WET_EFFECT=Force Wet Effect
+option.HQ_VOLUMETRIC_CLOUDS=HQ Volumetric Clouds
+option.VOLUMETRIC_CLOUDS=Volumetric Clouds
+option.PARALLAX=Parallax Occlusion Mapping
+option.PARALLAX_SHADOW=Parallax Self-Shadows
+option.ENABLE_SSAO=SSAO
+option.GI=Global Illumination
+option.SMOOTH_CLOUDS=Smooth Clouds
+option.shadowMapResolution=Shadow Resolution
+option.shadowDistance=Shadow Distance
+option.GI_ARTIFACT_REDUCTION=GI Artifact Reduction
+option.GI_QUALITY=GI Quality
+option.GI_RENDER_RESOLUTION=GI Resolution
+option.GI_RADIUS=GI Radius
+option.WATER_PARALLAX=Water Parallax
+option.WATER_CAUSTICS=Water Caustics
+option.ATMOSPHERIC_HAZE=Atmospheric Haze
+option.RAYLEIGH_AMOUNT=Atmospheric Density
+option.TORCHLIGHT_BRIGHTNESS=Torchlight Brightness
+option.TORCHLIGHT_COLOR_TEMPERATURE=Torchlight Color Temp
+option.TORCHLIGHT_FILL=Torchlight Fill
+option.HELD_TORCHLIGHT=Held Torchlight
+option.MOTION_BLUR=Motion Blur
+option.TONEMAP_STRENGTH=Tonemap Curve
+
+option.PARALLAX_HQ=High-Precision Parallax
+option.PARALLAX_DEPTH=Parallax Depth
+
+option.SUNLIGHT_INTENSITY=Sunlight Intensity
+
+option.RAIN_SPLASH_EFFECT=Rain Splash Effect
+option.RAIN_SPLASH_BILATERAL=Rain Splash Tex Filter
+option.ENTITY_STATUS_COLOR=Entity Status Color
+
+option.BLOOM_AMOUNT=Bloom Strength
+option.MICRO_BLOOM=Micro Bloom
+option.TONEMAP_CURVE=Tonemapping Curve
+option.EXPOSURE=Exposure
+option.GAMMA=Gamma
+option.LUMA_GAMMA=Luminance Gamma
+option.SATURATION=Saturation
+option.WHITE_CLIP=White Clipping
+
+option.TAA_ENABLED=Temporal Anti-Aliasing
+option.TAA_SOFTNESS=TAA Softness
+option.TAA_AGGRESSIVE=Aggressive TAA
+option.SHARPENING=Image Sharpness
+
+
+option.TONEMAP_OPERATOR=Tonemap Operator
+value.TONEMAP_OPERATOR.SEUSTonemap=SEUS
+value.TONEMAP_OPERATOR.HableTonemap=Hable
+value.TONEMAP_OPERATOR.ACESTonemap=ACES
+value.TONEMAP_OPERATOR.ACESTonemap2=ACES2
+
+
+profile.LOW=Low
+profile.MEDIUM=Medium
+profile.HIGH=High
+profile.ULTRA=Ultra
+profile.EXTREME=Extreme
+
+screen.ATMOSPHERICS=Atmospherics Options
+screen.LIGHTING=Lighting & Shadows Options
+screen.SURFACE=Surface Options
+screen.GIADVANCED=Advanced GI Settings
+screen.POSTPROCESSING=Post-Processing Settings
+*/
+
+option.shadowMapResolution=阴影分辨率
+option.shadowDistance=阴影覆盖范围
+option.TRANSLUCENT_SHADOWS=半透明物体(彩色)阴影
+option.SHADOW_SAMPLES=阴影渲染采样
+option.SCREEN_SPACE_SAMPLES=屏幕空间阴影渲染采样
+option.SUNLIGHT_INTENSITY=太阳光强度
+option.POINTLIGHT_BRIGHTNESS=点光源亮度
+option.POINTLIGHT_COLOR_TEMPERATURE=点光源色温
+option.POINTLIGHT_FILL=点光源光强衰减速度
+option.HELD_POINTLIGHT=手持发光物体光照
+option.GI=全局光照(类光追效果)
+option.GI_RENDER_RESOLUTION=半精度全局光照渲染
+value.GI_RENDER_RESOLUTIO.0=不启用
+value.GI_RENDER_RESOLUTIO.1=启用
+option.GI_QUALITY=全局光照采样精度
+option.GI_RADIUS=全局光照覆盖范围
+option.ENABLE_SSAO=屏幕空间环境光遮蔽
+option.AO_SAMPLES=环境光遮蔽渲染采样
+option.VOLUMETRIC_RAYS=体积光(光柱效果、丁达尔效应)
+option.RAYS_SAMPLES=体积光渲染采样
+option.TRANSLUCENT_RAYS=半透明物体(彩色)体积透光
+
+option.FORCE_WET_EFFECT=雨天湿表面效果(雨地效果)
+option.ENTITY_STATUS_COLOR=生物击伤发红效果
+option.RAY_TRACE_SAMPLES=屏幕空间光线跟踪渲染采样
+option.FAKE_SKY_TRACE_SAMPLES=天空反射渲染采样
+option.PARALLAX=视差效果(凹凸材质效果)
+option.PARALLAX_SHADOW=视差材质阴影
+option.PARALLAX_SAMPLES=视差渲染采样
+option.PARALLAX_DEPTH=视差深度(材质凹凸程度)
+option.AUTO_NORMAL_SPEC=自动法线生成
+option.AUTO_NORMAL_STRENGTH=自动法线强度
+option.WATER_PARALLAX=水面视差效果(立体水波效果)
+option.WATER_PARALLAX_SAMPLES=水面视差渲染采样
+option.WAVE_PARALLAX_SAMPLES=视差用水波纹理精度
+option.WAVE_SURFACE_SAMPLES=水面水波纹理精度
+option.WAVE_CAUSTICS_SAMPLES=水折射焦散用纹理精度
+option.RAIN_SPLASH_EFFECT=雨溅效果
+option.RAIN_SPLASH_BILATERAL=平滑化雨溅效果
+
+option.EXPOSURE=画面曝光
+option.TONEMAP_OPERATOR=色彩空间映射器(类滤镜)
+value.TONEMAP_OPERATOR.SEUSTonemap=SEUS
+value.TONEMAP_OPERATOR.UchimuraTonemap=Uchimura
+value.TONEMAP_OPERATOR.HableTonemap=Hable
+value.TONEMAP_OPERATOR.ACESTonemap=ACES
+value.TONEMAP_OPERATOR.ACESTonemap2=ACES2
+option.GAMMA=伽马矫正
+option.LUMA_GAMMA=光度伽马矫正(亮度伽马矫正)
+option.SATURATION=饱和度
+option.WHITE_CLIP=亮度裁切阀值
+option.TAA_ENABLED=时域性抗锯齿(去狗牙处理)
+option.HQ_TAA=高清晰度抗锯齿模式
+option.TAA_AGGRESSIVE=长时域采样抗锯齿模式
+option.TAA_SOFTNESS=抗锯齿模糊处理强度
+option.SHARPENING=锐化强度
+option.BLOOM_ENABLED=泛光效果
+option.BLOOM_AMOUNT=泛光强度
+option.MICRO_BLOOM=强光微泛光效果(溢光效果)
+option.MOTION_BLUR=动态模糊效果(拖影效果)
+option.MOTIONBLUR_STRENGTH=动态模糊强度
+
+profile.LOW=低配
+profile.MEDIUM=中配
+profile.HIGH=高配(未完成)
+profile.ULTRA=超高配(未完成)
+profile.CINEMATIC=影院级(显卡杀手)
+
+screen.LIGHTING=光照部分
+screen.DIRECT=直接光照(光源直射)部分
+screen.INDIRECT=间接光照(漫反射光照)部分
+screen.RAY=体积光(光柱、丁达尔效应)部分
+
+screen.ENV=环境部分
+
+screen.SURFACE=纹理部分
+screen.SURFACE_NORMAL=视差法线材质部分
+
+screen.POSTPROCESSING=后处理(后期特效)部分
+screen.HDR=色域处理(色彩效果调整)部分
+screen.TAA=时域性抗锯齿(去狗牙处理)
+screen.BLOOM=泛光
+screen.MB=动态模糊(拖影效果)
+screen.DOF=焦外浅景深效果(模糊背景效果)
+
+option.AUTHOR=作者
+option.DEV_TEAM=团队
+option.VERSION=光影版本
