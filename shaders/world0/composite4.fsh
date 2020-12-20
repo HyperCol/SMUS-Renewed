@@ -89,7 +89,8 @@ vec3 GetColorTexture(vec2 coord)
 	return GammaToLinear(texture2DLod(gaux3, coord, 0.0).rgb);
 }
 
-void 	MotionBlur(inout vec3 color) {
+void 	MotionBlur(inout vec3 color)
+{
 	float depth1 = texture2D(depthtex1, texcoord.st).x;
 	float depth2 = texture2D(depthtex2, texcoord.st).x;
 
@@ -139,9 +140,18 @@ void 	MotionBlur(inout vec3 color) {
 
 
 }
-vec2 velocity = currentPosition.xy - previousPosition.xy; velocity = MOTION_BLUR_FACTOR(velocity, intensity);
-vec2 DynamicFactor(in vec2 velocity, in float intensity){ return (exp(abs(velocity)) -1.0) * sign(velocity) * intensity;}
-vec2 StaticFactor(in vec2 velocity, in float intensity){float transformer = 1.0 / (MOTION_BLUR_FRAME_RATE * frameTime); velocity *= transformer; return DynamicFactor(velocity, intensity);}
+float velocity = MOTION_BLUR_FACTOR(velocity, intensity);
+vec2 DynamicFactor (in vec2 velocity, in float intensity)
+{
+	return (exp(abs(velocity)) -1.0) * sign(velocity) * intensity;
+}
+
+vec2 StaticFactor (in vec2 velocity, in float intensity)
+{
+	float transformer = 1.0 / (MOTION_BLUR_FRAME_RATE * frameTime);
+	velocity *= transformer;
+	return DynamicFactor(velocity, intensity);
+}
 
 
 /////////////////////////MAIN//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -163,6 +173,6 @@ void main() {
 
 	gl_FragData[0] = vec4(color, 1.0);
 	//Write color for previous frame here
-	gl_FragData[1] = vec4(texture2D(gaux3, texcoord.st).rgba);
+	gl_FragData[1] = texture2D(gaux3, texcoord.st).rgba;
 
 }
