@@ -76,7 +76,8 @@ float curve(float x)
 
 float Luminance(in vec3 color)
 {
-	return dot(color.rgb, vec3(0.2125f, 0.7154f, 0.0721f));
+	//return dot(color.rgb, vec3(0.2125f, 0.7154f, 0.0721f));
+	return dot(color, vec3(0.3333));
 }
 
 vec3 rand(vec2 coord)
