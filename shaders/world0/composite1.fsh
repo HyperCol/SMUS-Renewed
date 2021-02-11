@@ -634,7 +634,7 @@ void WaterRefraction(inout vec3 color, MaterialMask mask, vec4 viewPos, vec4 vie
 
 		if (mask.water > 0.5)
 		{
-			roughness = 0.1;
+			roughness = 0.0375;
 
 			if(isEyeInWater > 0.5)
 			{
@@ -875,7 +875,7 @@ void main()
 	}
 
 #ifdef VOLUMETRIC_RAYS
-	//if (materialMask.water > 0.5 || materialMask.ice > 0.5 || materialMask.stainedGlass > 0.5 || materialMask.stainedGlassP > 0.5 || materialMask.slimeBlock > 0.5 || gbuffer.smoothness >= 0.507144)
+	if (materialMask.water > 0.5 || materialMask.ice > 0.5 || materialMask.stainedGlass > 0.5 || materialMask.stainedGlassP > 0.5 || materialMask.slimeBlock > 0.5 || gbuffer.smoothness >= 0.507144)
 	{
 		vec3 raysData = vec3(texture2D(gaux1, texcoord.st).ba, texture2D(gaux3, texcoord.st).a);
 			 raysData = GammaToLinear(raysData);

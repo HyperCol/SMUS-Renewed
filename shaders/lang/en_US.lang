@@ -135,7 +135,9 @@ option.BLOOM_ENABLED=泛光效果
 option.BLOOM_AMOUNT=泛光强度
 option.MICRO_BLOOM=强光微泛光效果(溢光效果)
 option.MOTION_BLUR=动态模糊效果(拖影效果)
+option.MOTION_BLUR_SAMPLES=动态模糊采样
 option.MOTIONBLUR_STRENGTH=动态模糊强度
+option.MOTION_BLUR_PVP_MODE=PvP模式动态模糊
 
 profile.LOW=低配
 profile.MEDIUM=中配
