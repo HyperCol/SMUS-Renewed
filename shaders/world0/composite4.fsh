@@ -21,8 +21,6 @@ Do not modify this code until you have read the LICENSE.txt contained in the roo
 #define MOTION_BLUR // Motion blur. Makes motion look blurry.
 	#define MOTION_BLUR_SAMPLES 4.0  //Motion blur samples. [4.0 8.0 16.0 24.0 32.0 48.0 64.0 128.0 256.0 512.0 1024.0]
 	#define MOTIONBLUR_STRENGTH 1.0		// Default is 1.0. [0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 2.5 3.0 3.5 4.0]
-	#define MOTION_BLUR_FACTOR DynamicFactor //[DynamicFactor StaticFactor]
-	#define MOTION_BLUR_FRAME_RATE 24 // [15 20 24 25 30 40 50 60 120]
 /////////////////////////END OF CONFIGURABLE VARIABLES/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////END OF CONFIGURABLE VARIABLES/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -139,18 +137,6 @@ void 	MotionBlur(inout vec3 color)
 	color.rgb /= samples;
 
 
-}
-float velocity = MOTION_BLUR_FACTOR(velocity, intensity);
-vec2 DynamicFactor (in vec2 velocity, in float intensity)
-{
-	return (exp(abs(velocity)) -1.0) * sign(velocity) * intensity;
-}
-
-vec2 StaticFactor (in vec2 velocity, in float intensity)
-{
-	float transformer = 1.0 / (MOTION_BLUR_FRAME_RATE * frameTime);
-	velocity *= transformer;
-	return DynamicFactor(velocity, intensity);
 }
 
 

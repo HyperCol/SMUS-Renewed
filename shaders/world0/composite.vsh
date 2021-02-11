@@ -15,6 +15,11 @@ varying vec3 lightVector;
 varying vec3 upVector;
 
 varying vec3 colorSunlight;
+varying vec3 colorSkylight;
+
+varying vec4 skySHR;
+varying vec4 skySHG;
+varying vec4 skySHB;
 
 uniform mat4 gbufferModelView;
 uniform mat4 gbufferModelViewInverse;
@@ -34,10 +39,10 @@ uniform float nightVision;
 
 #include "Common.inc"
 
-void main() 
+void main()
 {
 	gl_Position = ftransform();
-	
+
 	texcoord = gl_MultiTexCoord0;
 
 	//Calculate ambient light from atmospheric scattering
@@ -49,6 +54,8 @@ void main()
 
 
 	colorSunlight = GetColorSunlight(worldSunVector, rainStrength);
+	GetSkylightData(worldSunVector,
+		skySHR, skySHG, skySHB,
+		colorSkylight/*, colorSkyUp*/);
 
-	
 }

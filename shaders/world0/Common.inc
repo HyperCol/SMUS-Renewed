@@ -1,6 +1,6 @@
 #define AUTHOR pspupsp
 #define DEV_TEAM Hypercol
-#define VERSION 0.2.7
+#define VERSION 0.3.0
 
 float saturate(float x)
 {
@@ -162,12 +162,12 @@ vec3 FromSH(vec4 cR, vec4 cG, vec4 cB, vec3 lightDir)
 #define HORIZON_THING
 #define SUNLIGHT_BRIGHTNESS 1.0 // Adjusts the relative brightness of sunlight versus sky/ambient light. [0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
 
-const vec3 Rayleigh = vec3(0.1, 0.25, 1.0);
+const vec3 Rayleigh = vec3(0.075, 0.275, 1.0);
 float NightBrightness = mix(0.00025, 0.002, nightVision);
 
-const float AtmosphereMie = 0.05;
-const float AtmosphereDensity = 0.25;
-const float AtmosphereDensityFalloff = 0.625;
+const float AtmosphereMie = 0.0;
+const float AtmosphereDensity = 0.5;
+const float AtmosphereDensityFalloff = 0.7;
 const float AtmosphereExtent = 100.0;
 
 // polynomial smooth min (k = 0.1); https://www.iquilezles.org/www/articles/smin/smin.htm

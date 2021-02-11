@@ -18,8 +18,6 @@ varying vec4 skySHR;
 varying vec4 skySHG;
 varying vec4 skySHB;
 
-uniform float eyeAltitude;
-
 uniform mat4 gbufferModelView;
 uniform mat4 gbufferModelViewInverse;
 
@@ -38,10 +36,10 @@ uniform float nightVision;
 
 #include "Common.inc"
 
-void main() 
+void main()
 {
 	gl_Position = ftransform();
-	
+
 	texcoord = gl_MultiTexCoord0;
 
 	//Calculate ambient light from atmospheric scattering
@@ -50,17 +48,17 @@ void main()
 
 	vec3 sunVector = normalize((gbufferModelView * vec4(worldSunVector.xyz, 0.0)).xyz);
 
-	if (sunAngle >= 0.5f) 
+	if (sunAngle >= 0.5f)
 	{
 		sunVector = -sunVector;
 	}
 
-	
+
 
 	colorSunlight = GetColorSunlight(worldSunVector, rainStrength);
 	GetSkylightData(worldSunVector,
 		skySHR, skySHG, skySHB,
 		colorSkylight/*, colorSkyUp*/);
 
-	
+
 }

@@ -98,6 +98,7 @@ uniform ivec2 eyeBrightnessSmooth;
 uniform int   fogMode;
 
 varying vec3 colorSunlight;
+varying vec3 colorSkylight;
 
 uniform int heldBlockLightValue;
 
@@ -115,37 +116,37 @@ uniform float taaStrength;
 /////////////////////////FUNCTIONS/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////FUNCTIONS/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-vec4 GetViewPositionRaw(in vec2 coord, in float depth) 
+vec4 GetViewPositionRaw(in vec2 coord, in float depth)
 {
 	vec4 fragposition = gbufferProjectionInverse * vec4(coord.s * 2.0f - 1.0f, coord.t * 2.0f - 1.0f, 2.0f * depth - 1.0f, 1.0f);
 		 fragposition /= fragposition.w;
 
-	
+
 	return fragposition;
 }
 
-vec4 GetViewPosition(in vec2 coord, in float depth) 
+vec4 GetViewPosition(in vec2 coord, in float depth)
 {
 #ifdef TAA_ENABLED
 	coord -= taaJitter * 0.5;
 #endif
-	
+
 	return GetViewPositionRaw(coord, depth);
 }
 
-float GetMaterialMask(const in int ID, in float matID) 
+float GetMaterialMask(const in int ID, in float matID)
 {
 	//Catch last part of sky
-	if (matID > 254.0f) 
+	if (matID > 254.0f)
 	{
 		matID = 0.0f;
 	}
 
-	if (matID == ID) 
+	if (matID == ID)
 	{
 		return 1.0f;
-	} 
-	else 
+	}
+	else
 	{
 		return 0.0f;
 	}
@@ -381,11 +382,7 @@ void WaterFog(inout vec3 color, inout vec3 origional, inout vec3 rayColor, Mater
 		float waterDepth = distance(viewPos0.xyz, viewPos1.xyz);
 		if (isEyeInWater > 0)
 		{
-			waterDepth = length(viewPos0.xyz) * 0.5;		
-			if (mask.water > 0.5 || mask.ice > 0.5)
-			{
-				waterDepth = length(viewPos0.xyz) * 0.5;
-			}	
+			waterDepth = length(viewPos0.xyz) * 0.5;
 		}
 
 
@@ -401,9 +398,8 @@ void WaterFog(inout vec3 color, inout vec3 origional, inout vec3 rayColor, Mater
 				//waterFogColor = vec3(0.2, 0.6, 1.0) * 7.0;
 				fogDensity = 0.025;
 			}
-			  waterFogColor *= 0.01 * dot(vec3(0.33333), colorSunlight);
+			  waterFogColor *= 0.03 * dot(vec3(0.33333), colorSunlight);
 			  waterFogColor *= (1.0 - rainStrength * 0.95);
-			  waterFogColor *= isEyeInWater * 2.0 + 1.0;
 
 
 		{
@@ -421,7 +417,7 @@ void WaterFog(inout vec3 color, inout vec3 origional, inout vec3 rayColor, Mater
 
 			waterFogColor *= dot(viewVector, upVector) * 0.5 + 0.5;
 			waterFogColor = waterFogColor + waterSunlightScatter;
-		
+
 
 			//waterFogColor *= pow(vec3(0.4, 0.72, 1.0) * 0.99, vec3(0.2 + (1.0 - eyeWaterDepth)));
 			waterFogColor = mix(waterFogColor, waterFogColor * vec3(0.2, 0.4, 1.0), 1.0 - eyeWaterDepth);
@@ -436,11 +432,6 @@ void WaterFog(inout vec3 color, inout vec3 origional, inout vec3 rayColor, Mater
 		vec3 viewVectorRefracted = refract(viewVector, waterNormal, 1.0 / 1.3333);
 		float scatter = 1.0 / (pow(saturate(dot(-lightVector, viewVectorRefracted) * 0.5 + 0.5) * 20.0, 2.0) + 0.1);
 
-		if (isEyeInWater < 0.5)
-		{
-			waterFogColor = mix(waterFogColor, colorSunlight * 21.0 * waterFogColor, vec3(scatter * (1.0 - rainStrength))) * waterSkylight;
-		}
-
 
 		color *= pow(vec3(0.4, 0.75, 1.0) * 0.99, vec3(waterDepth * 0.25 + 0.25));
 		color = mix(waterFogColor * 40.0, color, saturate(visibility));
@@ -452,9 +443,28 @@ void WaterFog(inout vec3 color, inout vec3 origional, inout vec3 rayColor, Mater
 	}
 }
 
+void RainFog(inout vec3 color, inout vec3 origional, inout vec3 rayColor, MaterialMask mask, in vec3 viewPos, in vec3 worldPos, in vec3 worldDir)
+{
+	float dist = length(worldPos.xyz);
+
+	float fogDensity = 0.01;
+		  fogDensity *= mix(0.0f, 1.0f, pow(eyeBrightnessSmooth.y / 240.0f, 6.0f));
+		  fogDensity *= rainStrength;
+
+	float fogFactor = 1.0 - exp(-fogDensity * dist);
+		  fogFactor *= fogFactor;
+
+	vec3 fogColor = colorSkylight * vec3(fogFactor * rainStrength * 0.725);
+		 fogColor *= 1.0 - clamp(mask.water + mask.ice + isEyeInWater, 0.0, 1.0) * 0.5;
+
+	color += fogColor;
+	origional += fogColor;
+	rayColor += fogColor;
+}
+
 /////////////////////////MAIN//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////MAIN//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void main() 
+void main()
 {
     GbufferData gbuffer 			= GetGbufferData();
 	MaterialMask materialMask 		= CalculateMasks(gbuffer.materialID);
@@ -505,6 +515,11 @@ void main()
 	#endif
 
 	WaterFog(finalComposite, waterFog, vRays, materialMask, gbuffer.mcLightmap.g, viewPos0, viewPos1, gbuffer.normal);
+
+	if(materialMask.sky < 0.5)
+	{
+		RainFog(finalComposite, waterFog, vRays, materialMask, viewPos0.xyz, worldPos0.xyz, worldDir);
+	}
 
 	#ifdef VOLUMETRIC_RAYS
 		if (materialMask.water < 0.5 && materialMask.ice < 0.5 && materialMask.stainedGlass < 0.5 && materialMask.stainedGlassP < 0.5 && materialMask.slimeBlock < 0.5 && gbuffer.smoothness < 0.507144)

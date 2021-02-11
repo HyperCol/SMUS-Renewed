@@ -444,13 +444,14 @@ vec4 	ComputeScreenSpaceRaytrace(vec3 normal, float roughness, bool edgeClamping
 
 		if (finalSampPos.x * finalSampPos.y != 0.0f) {
 			color += vec4(GammaToLinear(texture2D(gaux3, finalSampPos).rgb), 1.0);
-
+/*
 		#ifdef VOLUMETRIC_RAYS
 			vec3 raysData = vec3(texture2D(gaux1, finalSampPos).ba, texture2D(gaux3, finalSampPos).a);
 				 raysData = GammaToLinear(raysData);
 
 			color.rgb += raysData;
 		#endif
+*/
 		}
 	}
 
@@ -635,22 +636,22 @@ void WaterRefraction(inout vec3 color, MaterialMask mask, vec4 viewPos, vec4 vie
 
 			if(isEyeInWater > 0.5)
 			{
-				ior = -0.3333;
+				ior = -0.3;
 			}
 			else
 			{
-				ior = 0.3333;
+				ior = 0.3;
 			}
 		}
 		else if (mask.stainedGlass > 0.5)
 		{
 			roughness = 0.025;
-			ior = 0.5000;
+			ior = 0.275;
 		}
 		else if (mask.stainedGlassP > 0.5)
 		{
 			roughness = 0.0;
-			ior = 0.075;
+			ior = 0.05;
 		}
 		else if (mask.ice > 0.5)
 		{
@@ -660,7 +661,7 @@ void WaterRefraction(inout vec3 color, MaterialMask mask, vec4 viewPos, vec4 vie
 		else if (mask.slimeBlock > 0.5)
 		{
 			roughness = 1.0;
-			ior = 0.4000;
+			ior = 0.2000;
 		}
 		ior = ior * 0.25 + 1.0;
 
@@ -675,17 +676,6 @@ void WaterRefraction(inout vec3 color, MaterialMask mask, vec4 viewPos, vec4 vie
 		{
 			refraction = ComputeScreenSpaceRaytrace(normal, roughness, false, ior);
 		}
-
-		/*if (isEyeInWater > 0 && mask.water > 0.5)
-		{
-			vec3 refractVector = normalize(refract(normalize(viewPos.xyz), normal, 1.0 / ior));
-
-			vec4 fakeSkyRefraction = ComputeFakeSky(refractVector, normal, mask, roughness, ior);
-
-			fakeSkyRefraction.rgb = mix(noDataToRefract, fakeSkyRefraction.rgb, clamp(skylight * 16 - 5, 0.0f, 1.0f));
-			refraction.rgb = mix(refraction.rgb, fakeSkyRefraction.rgb, pow(vec3(1.0f - refraction.a), vec3(10.1f)));
-			refraction.a = fakeSkyRefraction.a;
-		}*/
 
 		color.rgb = mix(noDataToRefract, refraction.rgb, vec3(refraction.a));
 		totalInternalReflectionMask = 1.0 - refraction.a;
@@ -717,7 +707,7 @@ void 	CalculateSpecularReflections(inout vec3 color, vec3 normal, MaterialMask m
 		specularity = 1.0f;
 		metallic = 0.0;
 		roughness = 0.0;
-		
+
 	}
 	else if(mask.stainedGlass > 0.5 || mask.stainedGlassP > 0.5)
 	{
@@ -754,7 +744,7 @@ void 	CalculateSpecularReflections(inout vec3 color, vec3 normal, MaterialMask m
 			reflection.a *= totalInternalReflectionMask;
 
 			vec3 colorData = vec3(texture2D(gcolor, texcoord.st).a, texture2D(gnormal, texcoord.st).ba);
-				 colorData = color.rgb * (1.0 - totalInternalReflectionMask) + GammaToLinear(colorData) * totalInternalReflectionMask;
+				 colorData = color.rgb * (1.0 - totalInternalReflectionMask) + GammaToLinear(colorData) * totalInternalReflectionMask * 2.5;
 
 			color.rgb = mix(colorData, reflection.rgb, vec3(reflection.a));
 
@@ -821,23 +811,6 @@ void LandAtmosphericScattering(inout vec3 color, in vec3 viewPos, in vec3 viewDi
 
 	color += Atmosphere(normalize(worldDir), worldSunVector, wetness, dist * mix(0.005, 0.015, wetness)) * 0.1
 		* pow(1.0 - exp2(-dist * 0.02), 2.0);
-}
-
-void RainFog(inout vec3 color, in vec3 viewPos, in vec3 worldPos, in vec3 worldDir)
-{
-	float dist = length(worldPos.xyz);
-
-	float fogDensity = 0.01;
-		  fogDensity *= mix(0.0f, 1.0f, pow(eyeBrightnessSmooth.y / 240.0f, 6.0f));
-		  fogDensity *= rainStrength;
-
-	float fogFactor = 1.0 - exp(-fogDensity * dist);
-		  fogFactor *= fogFactor;
-
-	vec3 fogColor = colorSkylight;
-
-
-	color = mix(color, fogColor, vec3(fogFactor * rainStrength * 0.75));
 }
 
 void BlindnessFog(inout vec3 color, in vec3 viewPos, in vec3 viewDir)
@@ -910,11 +883,6 @@ void main()
 #endif
 
 	color /= 0.0001;
-
-	if (materialMask.sky < 0.5)
-	{
-		RainFog(color, viewPos.xyz, worldPos.xyz, worldDir);
-	}
 
 	BlindnessFog(color, viewPos.xyz, viewDir);
 
