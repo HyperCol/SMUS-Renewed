@@ -26,6 +26,10 @@ Do not modify this code until you have read the LICENSE.txt contained in the roo
 
 #define FORCE_WET_EFFECT // Make all surfaces get wet during rain regardless of specular texture values
 
+#define RAIN_SPLASH_EFFECT // Rain ripples/splashes on water and wet blocks.
+
+//#define RAIN_SPLASH_BILATERAL // Bilateral filter for rain splash/ripples. When enabled, ripple texture is smoothed (no hard pixel edges) at the cost of performance.
+
 #define PARALLAX_DEPTH 1.0 // Depth of parallax effect. [0.5 0.75 1.0 1.25 1.5 1.75 2.0 2.5 3.0]
 
 #define PARALLAX_SAMPLES 8 // Parallax Occlusion Mapping samples, higher is better, but costs more performance. [8 16 32 48 64 128 256]
@@ -44,6 +48,7 @@ uniform sampler2D lightmap;
 uniform sampler2D normals;
 uniform sampler2D specular;
 uniform sampler2D noisetex;
+uniform sampler2D gaux1;
 uniform float wetness;
 uniform float frameTimeCounter;
 uniform vec3 sunPosition;
@@ -52,6 +57,7 @@ uniform ivec2 atlasSize;
 uniform float sunAngle;
 uniform float shadowAngle;
 
+uniform vec3 cameraPosition;
 uniform float near;
 uniform float far;
 uniform float aspectRatio;
@@ -78,6 +84,8 @@ varying vec4 autoMaterialProperties;
 varying float materialIDs;
 
 varying float distance;
+
+uniform float rainStrength;
 
 varying vec3 viewPos;
 
@@ -331,6 +339,128 @@ float GetParallaxShadow(in vec2 texcoord, in vec3 lightVector, float baseHeight,
 	return sunVis;
 }
 
+vec3 Get3DNoise(in vec3 pos)
+{
+	pos.z += 0.0f;
+	vec3 p = floor(pos);
+	vec3 f = fract(pos);
+		 f = f * f * (3.0f - 2.0f * f);
+
+	vec2 uv =  (p.xy + p.z * vec2(17.0f, 37.0f)) + f.xy;
+	vec2 uv2 = (p.xy + (p.z + 1.0f) * vec2(17.0f, 37.0f)) + f.xy;
+	vec2 coord =  (uv  + 0.5f) / 64.0f;
+	vec2 coord2 = (uv2 + 0.5f) / 64.0f;
+	vec3 xy1 = texture2D(noisetex, coord).xyz;
+	vec3 xy2 = texture2D(noisetex, coord2).xyz;
+	return mix(xy1, xy2, vec3(f.z));
+}
+
+vec3 Get3DNoiseNormal(in vec3 pos)
+{
+	float center = Get3DNoise(pos + vec3( 0.0f, 0.0f, 0.0f)).x * 2.0f - 1.0f;
+	float left 	 = Get3DNoise(pos + vec3( 0.1f, 0.0f, 0.0f)).x * 2.0f - 1.0f;
+	float up     = Get3DNoise(pos + vec3( 0.0f, 0.1f, 0.0f)).x * 2.0f - 1.0f;
+
+	vec3 noiseNormal;
+		 noiseNormal.x = center - left;
+		 noiseNormal.y = center - up;
+
+		 noiseNormal.x *= 0.2f;
+		 noiseNormal.y *= 0.2f;
+
+		 noiseNormal.b = sqrt(1.0f - noiseNormal.x * noiseNormal.x - noiseNormal.g * noiseNormal.g);
+		 noiseNormal.b = 0.0f;
+
+	return noiseNormal.xyz;
+}
+
+float GetModulatedRainSpecular(in vec3 pos)
+{
+	if (rainStrength < 0.01)
+	{
+		return 0.0;
+	}
+
+	pos.xyz += frameTimeCounter * vec3(0.125f, 3.0f, 0.0625f);
+	pos.xz *= 1.0f;
+	pos.y *= 0.2f;
+
+	// pos.y += Get3DNoise(pos.xyz * vec3(1.0f, 0.0f, 1.0f)).x * 2.0f;
+
+	vec3 p = pos;
+
+	float n = Get3DNoise(p).y;
+		  n += Get3DNoise(p / 2.0f).x * 2.0f;
+		  n += Get3DNoise(p / 4.0f).x * 4.0f;
+
+		  n /= 7.0f;
+
+
+	n = saturate(n * 0.8 + 0.5) * 0.97;
+
+
+	return n;
+}
+
+
+vec3 GetRainAnimationTex(sampler2D tex, vec2 uv, float wet)
+{
+	float frame = mod(floor(frameTimeCounter * 60.0), 60.0);
+	vec2 coord = vec2(uv.x, mod(uv.y / 60.0, 1.0) - frame / 60.0);
+
+	vec3 n = texture2D(tex, coord).rgb * 2.0 - 1.0;
+	n.y *= -1.0;
+
+	n.xy = pow(abs(n.xy) * 1.0, vec2(2.0 - wet * wet * wet * 1.2)) * sign(n.xy);
+
+	return n;
+}
+
+vec3 BilateralRainTex(sampler2D tex, vec2 uv, float wet)
+{
+	vec3 n   = GetRainAnimationTex(tex, uv.xy                         , wet);
+	vec3 nR  = GetRainAnimationTex(tex, uv.xy + vec2(1.0, 0.0) / 128.0, wet);
+	vec3 nU  = GetRainAnimationTex(tex, uv.xy + vec2(0.0, 1.0) / 128.0, wet);
+	vec3 nUR = GetRainAnimationTex(tex, uv.xy + vec2(1.0, 1.0) / 128.0, wet);
+
+	vec2 fractCoord = fract(uv.xy * 128.0);
+
+	vec3 lerpX  = mix(n , nR , fractCoord.x);
+	vec3 lerpX2 = mix(nU, nUR, fractCoord.x);
+	vec3 lerpY  = mix(lerpX, lerpX2, fractCoord.y);
+
+	return lerpY;
+}
+
+vec3 GetRainSplashNormal(vec3 worldPos, vec3 worldNorm, inout float wet)
+{
+	if (wetness < 0.01)
+	{
+		return vec3(0.0, 0.0, 1.0);
+	}
+
+	vec3 pos = worldPos * 2.0;
+	vec3 flowPos = pos;
+
+
+	#ifdef RAIN_SPLASH_BILATERAL
+	vec3 n = BilateralRainTex(gaux1, pos.xz, wet);
+	#else
+	vec3 n = GetRainAnimationTex(gaux1, pos.xz, wet);
+	#endif
+
+	pos.x -= frameTimeCounter * 1.5;
+	float downfall = texture2D(noisetex, pos.xz * 0.0025).x;
+	downfall = saturate(downfall * 1.5 - 0.25);
+
+	wet = saturate(wet * 1.0 + downfall * (1.0 - wet) * 0.95);
+
+	float lod = dot(abs(fwidth(pos.xyz)), vec3(1.0));
+	n.xy *= rainStrength / (1.0 + lod * 5.0);
+
+	return n;
+}
+
 float NormalWeight(vec4 color)
 {
 	float weight = Luminance(color.rgb);
@@ -517,9 +647,17 @@ void main()
 	float emissive = 0.0;
 
 	float wetnessModulator  = saturate(worldNormal.y * 10.5 + 0.7);
-		  wetnessModulator *= saturate(abs(2.0 - materialIDs));
-		  wetnessModulator *= clamp(blockLight.y * 1.05 - 0.7, 0.0, 0.3) / 0.3;
-		  wetnessModulator *= saturate(wetness * 1.1 - 0.1);
+
+	#ifdef RAIN_SPLASH_EFFECT
+		//vec3 rainNormal = GetRainNormal(worldPosition.xyz + cameraPosition.xyz, wetnessModulator);
+		vec3 rainNormal = GetRainSplashNormal(viewPos, worldNormal, wetnessModulator);
+	#else
+		vec3 rainNormal = vec3(0.0, 0.0, 1.0);
+	#endif
+
+	wetnessModulator *= saturate(abs(2.0 - materialIDs));
+	wetnessModulator *= clamp(blockLight.y * 1.05 - 0.7, 0.0, 0.3) / 0.3;
+	wetnessModulator *= saturate(wetness * 1.1 - 0.1);
 
 	#ifndef FORCE_WET_EFFECT
 		wetnessModulator *= specTex.b;
@@ -535,6 +673,10 @@ void main()
 	#endif
 
 	vec3 normalMap = normalize(normalTex.xyz * 2.0 - 1.0);
+
+	#ifdef RAIN_SPLASH_EFFECT
+		normalMap = normalize(normalMap + rainNormal * wetnessModulator * saturate(worldNormal.y) * vec3(1.0, 1.0, 0.0));
+	#endif
 
 	viewNormal = normalize(normalMap) * tbnMatrix;
 
