@@ -1,13 +1,13 @@
 #version 130
 
 /*
- _______ _________ _______  _______  _ 
+ _______ _________ _______  _______  _
 (  ____ \\__   __/(  ___  )(  ____ )( )
 | (    \/   ) (   | (   ) || (    )|| |
 | (_____    | |   | |   | || (____)|| |
 (_____  )   | |   | |   | ||  _____)| |
       ) |   | |   | |   | || (      (_)
-/\____) |   | |   | (___) || )       _ 
+/\____) |   | |   | (___) || )       _
 \_______)   )_(   (_______)|/       (_)
 
 Do not modify this code until you have read the LICENSE.txt contained in the root directory of this shaderpack!
@@ -39,6 +39,8 @@ uniform ivec2 atlasSize;
 uniform float near;
 uniform float far;
 uniform float aspectRatio;
+uniform float sunAngle;
+uniform float shadowAngle;
 
 varying vec4 color;
 varying vec4 texcoord;
@@ -76,8 +78,8 @@ float CurveBlockLightTorch(float blockLight)
 	return blockLight;
 }
 
-void main() 
-{	
+void main()
+{
 
 	vec4 albedo = texture2D(texture, texcoord.st);
 	albedo *= color;

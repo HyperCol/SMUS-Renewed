@@ -1,13 +1,13 @@
 #version 130
 
 /*
- _______ _________ _______  _______  _ 
+ _______ _________ _______  _______  _
 (  ____ \\__   __/(  ___  )(  ____ )( )
 | (    \/   ) (   | (   ) || (    )|| |
 | (_____    | |   | |   | || (____)|| |
 (_____  )   | |   | |   | ||  _____)| |
       ) |   | |   | |   | || (      (_)
-/\____) |   | |   | (___) || )       _ 
+/\____) |   | |   | (___) || )       _
 \_______)   )_(   (_______)|/       (_)
 
 Do not modify this code until you have read the LICENSE.txt contained in the root directory of this shaderpack!
@@ -22,7 +22,7 @@ Do not modify this code until you have read the LICENSE.txt contained in the roo
 
 ///////////////////////////////////////////////////END OF ADJUSTABLE VARIABLES///////////////////////////////////////////////////
 
-#define ENTITY_STATUS_COLOR // Enables vanilla Minecraft entity color changing (red when hurt, creeper flashing when exploding). 
+#define ENTITY_STATUS_COLOR // Enables vanilla Minecraft entity color changing (red when hurt, creeper flashing when exploding).
 
 /* DRAWBUFFERS:0123 */
 
@@ -40,6 +40,8 @@ uniform ivec2 atlasSize;
 uniform float near;
 uniform float far;
 uniform float aspectRatio;
+uniform float sunAngle;
+uniform float shadowAngle;
 
 varying vec4 color;
 varying vec4 texcoord;
@@ -80,8 +82,8 @@ float CurveBlockLightTorch(float blockLight)
 }
 
 
-void main() 
-{	
+void main()
+{
 
 	vec4 albedo = texture2D(texture, texcoord.st);
 	albedo *= color;
@@ -131,7 +133,7 @@ void main()
 	mcLightmap.x = pow(mcLightmap.x, 0.25);
 	mcLightmap.x += rand(vertexPos.xy + sin(frameTimeCounter)).x * (1.5 / 255.0);
 
-	
+
 
 	gl_FragData[0] = albedo;
 	gl_FragData[1] = vec4(mcLightmap.xy, emissive, albedo.a);

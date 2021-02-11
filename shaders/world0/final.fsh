@@ -55,6 +55,8 @@ varying vec4 texcoord;
 varying vec3 lightVector;
 
 uniform int worldTime;
+uniform float sunAngle;
+uniform float shadowAngle;
 
 uniform float near;
 uniform float far;
@@ -203,7 +205,7 @@ vec3 UchimuraTonemap(vec3 color) {
 // Tonemapping by John Hable
 vec3 HableTonemap(vec3 x)
 {
-	
+
 	x = x * coneOverlap;
 
 	x *= 1.5;
@@ -309,7 +311,7 @@ vec3 Tonemap2(vec3 color)
 
 
 
-vec3 	CalculateNoisePattern1(vec2 offset, float size) 
+vec3 	CalculateNoisePattern1(vec2 offset, float size)
 {
 	vec2 coord = texcoord.st;
 
@@ -380,16 +382,16 @@ vec3 GetBloomTap(vec2 coord, const float octave, const vec2 offset)
 vec2 CalcOffset(float octave)
 {
     vec2 offset = vec2(0.0);
-    
+
     vec2 padding = vec2(30.0) * texel;
-    
+
     offset.x = -min(1.0, floor(octave / 3.0)) * (0.25 + padding.x);
-    
+
     offset.y = -(1.0 - (1.0 / exp2(octave))) - padding.y * octave;
 
 	offset.y += min(1.0, floor(octave / 3.0)) * 0.35;
-    
- 	return offset;   
+
+ 	return offset;
 }
 
 
@@ -436,7 +438,7 @@ void FogScatter(inout vec3 color, in vec3 bloomData)
 	color = mix(color, bloomData, vec3((0.08 + fogFactor) * BLOOM_AMOUNT));
 }
 
-void CalculateExposureEyeBrightness(inout vec3 color) 
+void CalculateExposureEyeBrightness(inout vec3 color)
 {
 	float exposureMax = 1.55f;
 		  //exposureMax *= mix(1.0f, 0.25f, timeSunriseSunset);
@@ -470,9 +472,9 @@ void MicroBloom(inout vec3 color, in vec2 uv)
 	vec3 bloom = vec3(0.0);
 	float allWeights = 0.0f;
 
-	for (int i = 0; i < 4; i++) 
+	for (int i = 0; i < 4; i++)
 	{
-		for (int j = 0; j < 4; j++) 
+		for (int j = 0; j < 4; j++)
 		{
 			float weight = 1.0f - distance(vec2(i, j), vec2(2.5f)) / 2.5;
 				  weight = clamp(weight, 0.0f, 1.0f);
@@ -562,7 +564,7 @@ void main() {
 
 	// color = pow(color, vec3(0.8));
 
-	color *= 34.0 * EXPOSURE; 
+	color *= 34.0 * EXPOSURE;
 
 
 	color = TONEMAP_OPERATOR(color);

@@ -64,6 +64,8 @@ uniform vec2 texel;
 uniform float rainStrength;
 uniform float wetness;
 uniform float aspectRatio;
+uniform float sunAngle;
+uniform float shadowAngle;
 uniform float frameTimeCounter;
 uniform sampler2D shadowcolor0;
 uniform sampler2D shadowcolor1;

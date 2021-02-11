@@ -41,6 +41,8 @@ varying vec4 texcoord;
 varying vec3 lightVector;
 
 uniform int worldTime;
+uniform float sunAngle;
+uniform float shadowAngle;
 
 uniform float near;
 uniform float far;

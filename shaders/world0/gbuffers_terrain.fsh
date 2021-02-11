@@ -68,6 +68,7 @@ uniform float near;
 uniform float far;
 uniform float aspectRatio;
 uniform float sunAngle;
+uniform float shadowAngle;
 
 varying vec4 color;
 varying vec4 texcoord;

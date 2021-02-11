@@ -85,6 +85,7 @@ uniform float wetness;
 uniform float aspectRatio;
 uniform float frameTimeCounter;
 uniform float sunAngle;
+uniform float shadowAngle;
 uniform vec3 skyColor;
 uniform vec3 cameraPosition;
 

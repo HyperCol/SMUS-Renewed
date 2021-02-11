@@ -77,6 +77,7 @@ uniform float rainStrength;
 uniform float wetness;
 uniform float aspectRatio;
 uniform float frameTimeCounter;
+uniform float sunAngle;
 
 uniform mat4 gbufferProjection;
 uniform mat4 gbufferProjectionInverse;

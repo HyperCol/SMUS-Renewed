@@ -49,6 +49,8 @@ uniform int frameCounter;
 uniform float wetness;
 uniform int isEyeInWater;
 uniform float rainStrength;
+uniform float sunAngle;
+uniform float shadowAngle;
 
 varying vec3 normal;
 varying vec3 globalNormal;

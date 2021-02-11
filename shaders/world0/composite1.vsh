@@ -8,6 +8,7 @@ uniform vec3 upPosition;
 uniform float rainStrength;
 uniform vec3 skyColor;
 uniform float sunAngle;
+uniform float shadowAngle;
 
 uniform int worldTime;
 

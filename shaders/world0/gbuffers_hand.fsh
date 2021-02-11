@@ -50,6 +50,7 @@ uniform vec3 sunPosition;
 uniform vec3 upPosition;
 uniform ivec2 atlasSize;
 uniform float sunAngle;
+uniform float shadowAngle;
 
 uniform float near;
 uniform float far;

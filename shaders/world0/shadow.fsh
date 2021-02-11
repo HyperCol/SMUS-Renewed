@@ -10,6 +10,8 @@ uniform sampler2D noisetex;
 uniform float wetness;
 uniform float nightVision;
 uniform float frameTimeCounter;
+uniform float sunAngle;
+uniform float shadowAngle;
 
 uniform float rainStrength;
 uniform int isEyeInWater;
