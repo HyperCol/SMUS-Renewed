@@ -433,14 +433,14 @@ void WaterFog(inout vec3 color, inout vec3 origional, inout vec3 rayColor, Mater
 		vec3 viewVectorRefracted = refract(viewVector, waterNormal, 1.0 / 1.3333);
 		float scatter = 1.0 / (pow(saturate(dot(-lightVector, viewVectorRefracted) * 0.5 + 0.5) * 20.0, 2.0) + 0.1);
 
+		vec3 depthColour = pow(vec3(0.4, 0.75, 1.0) * 0.99, vec3(waterDepth * 0.25 + 0.25));
 
-		color *= pow(vec3(0.4, 0.75, 1.0) * 0.99, vec3(waterDepth * 0.25 + 0.25));
+		color *= depthColour;
+		rayColor *= depthColour;
+
 		color = mix(waterFogColor * 40.0, color, saturate(visibility));
-
 		origional = mix(waterFogColor * 40.0, vec3(0.0), saturate(visibility));
-
-		rayColor *= pow(vec3(0.4, 0.75, 1.0) * 0.99, vec3(waterDepth * 0.25 + 0.25));
-		rayColor = mix(waterFogColor * 40.0, rayColor, saturate(visibility));
+		rayColor = mix(rayColor * waterFogColor * 40.0, rayColor, saturate(visibility));
 	}
 }
 
@@ -517,7 +517,7 @@ void main()
 
 	WaterFog(finalComposite, waterFog, vRays, materialMask, gbuffer.mcLightmap.g, viewPos0, viewPos1, gbuffer.normal);
 
-	if(materialMask.sky < 0.5)
+	if(materialMask.sky < 0.5 && isEyeInWater < 0.5)
 	{
 		RainFog(finalComposite, waterFog, vRays, materialMask, viewPos0.xyz, worldPos0.xyz, worldDir);
 	}

@@ -1,6 +1,6 @@
 #define AUTHOR pspupsp
 #define DEV_TEAM Hypercol
-#define VERSION 0.3.6
+#define VERSION 0.3.7
 
 float saturate(float x)
 {

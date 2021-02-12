@@ -743,10 +743,11 @@ void 	CalculateSpecularReflections(inout vec3 color, vec3 normal, MaterialMask m
 		if (isEyeInWater > 0 && mask.water > 0.5)
 		{
 			vec4 reflection = ComputeScreenSpaceRaytrace(normal, roughness, true, 0.0);
-			reflection.a *= totalInternalReflectionMask;
-
 			vec3 colorData = vec3(texture2D(gcolor, texcoord.st).a, texture2D(gnormal, texcoord.st).ba);
-				 colorData = color.rgb * (1.0 - totalInternalReflectionMask) + GammaToLinear(colorData) * totalInternalReflectionMask * 2.5;
+				 colorData = color.rgb * (1.0 - totalInternalReflectionMask)
+				 		   + GammaToLinear(colorData) * (1.0 - reflection.a) * totalInternalReflectionMask;
+
+			reflection.a *= totalInternalReflectionMask;
 
 			color.rgb = mix(colorData, reflection.rgb, vec3(reflection.a));
 

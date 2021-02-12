@@ -22,9 +22,9 @@ steps:
     rootFolderOrFile: '$(System.DefaultWorkingDirectory)'
     includeRootFolder: false
     archiveType: 'zip'
-    archiveFile: '$(Build.ArtifactStagingDirectory)/SMUS-Renewed(Build-$(Build.BuildId)).zip'
+    archiveFile: '$(Build.ArtifactStagingDirectory)/SMUS-Renewed(Build$(Build.BuildId)).zip'
     replaceExistingArchive: false
 - task: PublishPipelineArtifact@1
   inputs:
     targetPath: $(Build.ArtifactStagingDirectory)
-    artifactName: SMUS-Renewed(Build:$(Build.BuildId))
+    artifactName: Build$(Build.BuildId)
