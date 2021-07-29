@@ -18,8 +18,6 @@ Do not modify this code until you have read the LICENSE.txt contained in the roo
 /////////////////////////CONFIGURABLE VARIABLES////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////CONFIGURABLE VARIABLES////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#define BLOOM_ENABLED
-
 #define TAA_ENABLED // Temporal Anti-Aliasing. Utilizes multiple rendered frames to reconstruct an anti-aliased image similar to supersampling. Can cause some artifacts.
 	#define HQ_TAA
 	//#define TAA_AGGRESSIVE // Makes Temporal Anti-Aliasing more generously blend previous frames. This results in a more stable and smoother image, but causes more noticeable artifacts with movement.
@@ -30,7 +28,7 @@ Do not modify this code until you have read the LICENSE.txt contained in the roo
 /////////////////////////END OF CONFIGURABLE VARIABLES/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////END OF CONFIGURABLE VARIABLES/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/* DRAWBUFFERS:467 */
+/* DRAWBUFFERS:67 */
 
 
 
@@ -91,33 +89,7 @@ uniform float taaStrength;
 
 uniform float nightVision;
 
-#include "Common.inc"
-
-vec3 GetColor(vec2 coord)
-{
-	return GammaToLinear(texture2D(gnormal, coord).rgb);
-}
-
-vec3 BlurV(vec2 coord)
-{
-
-	vec3 color = vec3(0.0);
-
-	float weights[5] = float[5](0.27343750, 0.21875000, 0.10937500, 0.03125000, 0.00390625);
-	float offsets[5] = float[5](0.00000000, 1.00000000, 2.00000000, 3.00000000, 4.00000000);
-
-	color += GetColor(coord) * weights[0];
-
-	for (int i = 1; i < 5; i++)
-	{
-		color += GetColor(coord + vec2(0.0, offsets[i] * 1.0) * texel) * weights[i];
-		color += GetColor(coord - vec2(0.0, offsets[i] * 1.0) * texel) * weights[i];
-	}
-
-	return color;
-
-	//return GetColor(coord);
-}
+#include "/Common.inc"
 
 float 	ExpToLinearDepth(in float depth)
 {
@@ -224,14 +196,6 @@ vec4 SMAAFitter(sampler2D prevColorBuf, vec2 coord){
 void main() {
 
 	//vec3 color = GammaToLinear(texture2D(gaux3, texcoord.st).rgb);
-
-	vec3 bloomColor = vec3(0.0);
-
-#ifdef BLOOM_ENABLED
-	bloomColor = BlurV(texcoord.st);
-
-	bloomColor = LinearToGamma(bloomColor);
-#endif
 
 
 	//color += rand(texcoord.st) * (1.0 / 255.0);
@@ -409,8 +373,7 @@ void main() {
 
 	#endif
 
-	gl_FragData[0] = vec4(bloomColor.rgb, 1.0f);
-	gl_FragData[1] = vec4(taa, 1.0);
-	gl_FragData[2] = vec4(vec3(0.0), 1.0f);
+	gl_FragData[0] = vec4(taa, 1.0);
+	gl_FragData[1] = vec4(vec3(0.0), 1.0f);
 
 }

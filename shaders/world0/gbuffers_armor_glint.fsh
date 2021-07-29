@@ -67,7 +67,7 @@ varying vec3 viewPos;
 
 uniform float nightVision;
 
-#include "Common.inc"
+#include "/Common.inc"
 
 void main()
 {

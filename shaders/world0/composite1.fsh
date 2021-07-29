@@ -101,7 +101,7 @@ uniform float nightVision;
 
 uniform vec2 taaJitter;
 
-#include "Common.inc"
+#include "/Common.inc"
 
 /////////////////////////FUNCTIONS/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////FUNCTIONS/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -325,6 +325,44 @@ bool 	GetSkyMask(in vec2 coord)
 	}
 }
 
+float G1V(float dotNV, float k)
+{
+	return 1.0 / (dotNV * (1.0 - k) + k);
+}
+
+float SpecularGGX(vec3 N, vec3 V, vec3 L, float roughness, float F0)
+{
+	//N:world normal
+	//V:world vector
+	//L:world light vector
+	float alpha = roughness * roughness;
+
+	vec3 H = normalize(V + L);
+
+	float dotNL = saturate(dot(N, L));
+	float dotNV = saturate(dot(N, V));
+	float dotNH = saturate(dot(N, H));
+	float dotLH = saturate(dot(L, H));
+
+	float F, D, vis;
+
+	float alphaSqr = alpha * alpha;
+	float pi = 3.14159265359;
+	float denom = dotNH * dotNH * (alphaSqr - 1.0) + 1.0;
+	D = alphaSqr / (pi * denom * denom);
+
+	float dotLH5 = pow(1.0f - dotLH, 5.0);
+	F = F0 + (1.0 - F0) * dotLH;
+
+	float k = alpha * 0.5;
+	vis = G1V(dotNL, k) * G1V(dotNV, k);
+
+	float specular  = dotNL * D * F * vis;
+		  specular *= saturate(pow(1.0 - roughness, 0.7) * 2.0);
+
+	return saturate(specular * 0.5);
+}
+
 vec3 convertScreenSpaceToWorldSpace(vec2 coord) {
     vec4 fragposition = gbufferProjectionInverse * vec4(vec3(coord, texture2DLod(depthtex0, coord, 0).x) * 2.0 - 1.0, 1.0);
 		 fragposition /= fragposition.w;
@@ -341,10 +379,12 @@ vec3 ProjectBack(vec3 cameraSpace)
     return screenSpace;
 }
 
-vec4 	ComputeScreenSpaceRaytrace(vec3 normal, float roughness, bool edgeClamping, float rayType)
+vec4 	ComputeScreenSpaceRaytrace(vec3 normal, float roughness, float metallic, bool edgeClamping, float rayType)
 {
 	float depth = texture2D(depthtex0, texcoord.st).x;
     vec3 camPos = GetViewPosition(texcoord.st, depth).xyz;
+	vec3 worldDir = normalize((gbufferModelViewInverse * vec4(camPos, 1.0)).xyz);
+	vec3 worldNormal = normalize((gbufferModelViewInverse * vec4(normal, 1.0)).xyz);
 
     vec3 cameraSpaceViewDir = normalize(camPos);
 	vec3 camVecOrig = vec3(0.0);
@@ -352,37 +392,39 @@ vec4 	ComputeScreenSpaceRaytrace(vec3 normal, float roughness, bool edgeClamping
 	if (rayType > 0.0)
 	{
 		camVecOrig = normalize(refract(cameraSpaceViewDir, normal, 1.0 / rayType));
-		angle = 1.0 - dot(camVecOrig, normal);
 	}
 	else
 	{
 		camVecOrig = normalize(reflect(cameraSpaceViewDir, normal));
-		angle = dot(camVecOrig, normal);
 	}
 
 	int samp = RAY_TRACE_SAMPLES;
 
-	float roughnessCheck = step(roughness + angle, 0.0);
-	samp = int(roughnessCheck) + (1 - int(roughnessCheck)) * samp;
-
     const int maxRefinements = 5;
-	int numRefinements = 0;
-    int count = 0;
-	vec2 finalSampPos = vec2(0.0f);
+	vec2 finalSampPos = vec2(-1.0f);
 
 	vec4 color = vec4(0.0);
 
 	for(int i = 1; i <= samp; i++)
 	{
-		float alpha = float(i) * 3.14159265358 * 3.22;
-		vec3 offs = vec3(cos(alpha), sin(alpha), 1.0 - cos(alpha)) * (float(i) / float(samp));
-			 offs *= rand(texcoord.st + sin(frameTimeCounter)) * angle * roughness * 0.1;
+		vec3 offs = normalize(rand(texcoord.st + sin(frameTimeCounter) + i / samp) * 2.0 - 1.0) * 0.5;
+		if (rayType > 0.0)
+		{
+			offs *= roughness * dot(cameraSpaceViewDir, camVecOrig) * 0.5;
+		}
+		else
+		{
+			vec3 worldLightDir = normalize(camVecOrig + offs);
+				 worldLightDir = normalize((gbufferModelViewInverse * vec4(worldLightDir, 1.0)).xyz);
+			offs *= SpecularGGX(worldNormal, worldDir, worldLightDir, roughness, metallic);
+		}
 		vec3 camVec = normalize(camVecOrig + offs);
 
 		vec3 camVecPos = camPos + camVec;
 		vec3 currPos = ProjectBack(camVecPos);
 
 		int numSteps = 0;
+		int numRefinements = 0;
 
 		for (int j = 0; j < 40; j++)
 		{
@@ -409,7 +451,7 @@ vec4 	ComputeScreenSpaceRaytrace(vec3 normal, float roughness, bool edgeClamping
 				++numRefinements;
 		//If refinements run out
 			}
-			else if (diff >= 0 && diff <= error * 4.0f && numRefinements > maxRefinements)
+			else if (diff >= 0 && diff <= error * 4.0f && numRefinements > maxRefinements || j == 40)
 			{
 				finalSampPos = sampPos;
 				break;
@@ -438,13 +480,10 @@ vec4 	ComputeScreenSpaceRaytrace(vec3 normal, float roughness, bool edgeClamping
 				}
 			}
 
-
-
-        count++;
         numSteps++;
 		}
 
-		if (finalSampPos.x * finalSampPos.y != 0.0f) {
+		if (finalSampPos.x >= 0.0 && finalSampPos.y >= 0.0) {
 			color += vec4(GammaToLinear(texture2D(gaux3, finalSampPos).rgb), 1.0);
 /*
 		#ifdef VOLUMETRIC_RAYS
@@ -457,9 +496,7 @@ vec4 	ComputeScreenSpaceRaytrace(vec3 normal, float roughness, bool edgeClamping
 		}
 	}
 
-	color /= float(samp);
-
-    return color;
+    return color / float(samp);
 }
 
 float RenderSunDisc(vec3 worldDir, vec3 sunDir)
@@ -483,35 +520,33 @@ float RenderSunDisc(vec3 worldDir, vec3 sunDir)
 	return disc;
 }
 
-vec4 ComputeFakeSky(vec3 dir, vec3 normal, MaterialMask mask, float roughness, float rayType)
+vec4 ComputeFakeSky(vec3 dir, vec3 normal, MaterialMask mask, float roughness, float metallic, float rayType)
 {
 	vec4 color = vec4(0.0);
 	vec3 dirOrig = dir;
-	float angle = dot(dirOrig, normal);
-	if (rayType > 0.0)
-	{
-		angle = 1.0 - angle;
-	}
+
+	float depth = texture2D(depthtex0, texcoord.st).x;
+    vec3 camPos = GetViewPosition(texcoord.st, depth).xyz;
+	vec3 worldDir = normalize((gbufferModelViewInverse * vec4(camPos, 1.0)).xyz);
+	vec3 worldNormal = normalize((gbufferModelViewInverse * vec4(normal, 1.0)).xyz);
 
 	int samp = FAKE_SKY_TRACE_SAMPLES;
 
-	float roughnessCheck = step(roughness + angle, 0.0);
-	samp = int(roughnessCheck) + (1 - int(roughnessCheck)) * samp;
-
 	for(int i = 1; i <= samp; i++)
 	{
-		float alpha = float(i) * 3.14159265358 * 3.22;
-		vec3 offs = vec3(cos(alpha), sin(alpha), 1.0 - cos(alpha)) * (float(i) / float(samp));
-			 offs *= rand(texcoord.st + sin(frameTimeCounter)) * angle * roughness * 0.1;
+		vec3 offs = normalize(rand(texcoord.st + sin(frameTimeCounter) + i / samp) * 2.0 - 1.0) * 0.5;
+		vec3 worldLightDir = normalize(dirOrig + offs);
+			 worldLightDir = normalize((gbufferModelViewInverse * vec4(worldLightDir, 1.0)).xyz);
+		offs *= SpecularGGX(worldNormal, -worldDir, worldLightDir, roughness, metallic);
 
 		dir = normalize(dirOrig + offs);
-		vec3 worldDir = normalize((gbufferModelViewInverse * vec4(dir.xyz, 1.0)).xyz);
+		vec3 lightDir = normalize((gbufferModelViewInverse * vec4(dir.xyz, 1.0)).xyz);
 		float fresnel = pow(saturate(dot(-dir, normal) + 1.0), 5.0) * 0.98 + 0.02;
 
-		vec3 sky = SkyShading(worldDir.xyz, worldSunVector);
+		vec3 sky = SkyShading(lightDir.xyz, worldSunVector);
 
 
-		vec3 sunDisc = vec3(RenderSunDisc(worldDir, worldSunVector));
+		vec3 sunDisc = vec3(RenderSunDisc(lightDir, worldSunVector));
 		//sunDisc *= normalize(sky + 0.001);
 		sunDisc *= colorSunlight;
 		sunDisc *= pow(saturate(worldSunVector.y + 0.1), 0.9);
@@ -519,7 +554,7 @@ vec4 ComputeFakeSky(vec3 dir, vec3 normal, MaterialMask mask, float roughness, f
 
 		//if (mask.water > 0.5)
 
-		sunDisc *= saturate(mask.water + roughness);
+		//sunDisc *= saturate(mask.water + roughness);
 		sky += sunDisc;
 
 
@@ -540,93 +575,6 @@ void WaterRefraction(inout vec3 color, MaterialMask mask, vec4 viewPos, vec4 vie
 		{
 			wavesNormal = normalize(wavesNormal * 4.0);
 		}
-		//wavesNormal = (gbufferModelViewInverse * vec4(wavesNormal, 1.0)).xyz;
-/*
-		float waterDeep = length(viewPos1.xyz) - length(viewPos.xyz);
-
-		float refractAmount = saturate(waterDeep) * 0.125;
-
-		float aberration = 0.025;
-		float refractionAmount = 1.0;
-
-		float blurLevel = 1.0;
-
-		if (mask.water > 0.5)
-		{
-			blurLevel = 2.5;
-
-			if(isEyeInWater > 0.5)
-			{
-				refractionAmount = -1.3333;
-			}
-			else
-			{
-				refractionAmount = 1.3333;
-			}
-		}
-		else if (mask.stainedGlass > 0.5)
-		{
-			blurLevel = 0.75;
-			refractionAmount = 1.5000;
-		}
-		else if (mask.stainedGlassP > 0.5)
-		{
-			blurLevel = 0.25;
-			refractionAmount = 0.1875;
-		}
-		else if (mask.ice > 0.5)
-		{
-			blurLevel = 25.0;
-			refractionAmount = 1.3090;
-		}
-		else if (mask.slimeBlock > 0.5)
-		{
-			aberration = 0.0;
-			blurLevel = 48.0;
-			refractionAmount = 0.5;
-		}
-
-		vec2 refractCoord0 = texcoord.st;
-		vec2 refractCoord1 = texcoord.st;
-		vec2 refractCoord2 = texcoord.st;
-
-		if(depth0 < depth1)
-		{
-			vec2 offsets = wavesNormal.xy / (length(viewPos.xyz) + 1.05) * refractAmount;
-
-			refractCoord0 -= offsets * refractionAmount;
-			refractCoord1 -= offsets * (refractionAmount + aberration);
-			refractCoord2 -= offsets * (refractionAmount + aberration * 2.0);
-		}
-
-		float fogDensity = 0.40;
-		float visibility = 1.0f / exp(waterDeep * fogDensity) * refractionAmount;
-
-
-		vec4 blendWeights = vec4(1.0, 0.0001, 0.00005, 0.00001);
-		blendWeights = pow(blendWeights, vec4(visibility));
-
-		float blendWeightsTotal = dot(blendWeights, vec4(1.0));
-		vec4 blur = log2(min(resolution.x, resolution.y)) * vec4(0.10, 0.50, 2.25, 4.00) * blurLevel * 0.125;
-
-		color.r = (GammaToLinear(texture2DLod(gaux3, refractCoord0.xy, blur.x).r) * blendWeights.x
-				 + GammaToLinear(texture2DLod(gaux3, refractCoord0.xy, blur.y).r) * blendWeights.y
-				 + GammaToLinear(texture2DLod(gaux3, refractCoord0.xy, blur.z).r) * blendWeights.z
-				 + GammaToLinear(texture2DLod(gaux3, refractCoord0.xy, blur.w).r) * blendWeights.w
-				  ) / blendWeightsTotal;
-
-		color.g = (GammaToLinear(texture2DLod(gaux3, refractCoord1.xy, blur.x).g) * blendWeights.x
-				 + GammaToLinear(texture2DLod(gaux3, refractCoord1.xy, blur.y).g) * blendWeights.y
-				 + GammaToLinear(texture2DLod(gaux3, refractCoord1.xy, blur.z).g) * blendWeights.z
-				 + GammaToLinear(texture2DLod(gaux3, refractCoord1.xy, blur.w).g) * blendWeights.w
-				  ) / blendWeightsTotal;
-
-		color.b = (GammaToLinear(texture2DLod(gaux3, refractCoord2.xy, blur.x).b) * blendWeights.x
-				 + GammaToLinear(texture2DLod(gaux3, refractCoord2.xy, blur.y).b) * blendWeights.y
-				 + GammaToLinear(texture2DLod(gaux3, refractCoord2.xy, blur.z).b) * blendWeights.z
-				 + GammaToLinear(texture2DLod(gaux3, refractCoord2.xy, blur.w).b) * blendWeights.w
-				  ) / blendWeightsTotal;
-*/
 
 		float ior = 0.0;
 
@@ -634,7 +582,7 @@ void WaterRefraction(inout vec3 color, MaterialMask mask, vec4 viewPos, vec4 vie
 
 		if (mask.water > 0.5)
 		{
-			roughness = 0.0375;
+			roughness = 0.005;
 
 			if(isEyeInWater > 0.5)
 			{
@@ -647,7 +595,7 @@ void WaterRefraction(inout vec3 color, MaterialMask mask, vec4 viewPos, vec4 vie
 		}
 		else if (mask.stainedGlass > 0.5)
 		{
-			roughness = 0.025;
+			roughness = 0.0005;
 			ior = 0.275;
 		}
 		else if (mask.stainedGlassP > 0.5)
@@ -657,26 +605,26 @@ void WaterRefraction(inout vec3 color, MaterialMask mask, vec4 viewPos, vec4 vie
 		}
 		else if (mask.ice > 0.5)
 		{
-			roughness = 0.125;
+			roughness = 0.01;
 			ior = 0.3090;
 		}
 		else if (mask.slimeBlock > 0.5)
 		{
-			roughness = 1.0;
+			roughness = 0.5;
 			ior = 0.2000;
 		}
-		ior = ior * 0.25 + 1.0;
+		ior = ior * 0.125 + 1.0;
 
 
 		vec3 noDataToRefract = GammaToLinear(texture2D(gaux3, texcoord.st + rand(texcoord.st + sin(frameTimeCounter)).xy * roughness * 0.04, 0.0).rgb);
 		vec4 refraction = vec4(noDataToRefract, 1.0);
 		if(isEyeInWater > 0)
 		{
-			refraction = ComputeScreenSpaceRaytrace(normal, roughness, true, ior);
+			refraction = ComputeScreenSpaceRaytrace(normal, roughness, 0.0, true, ior);
 		}
 		else
 		{
-			refraction = ComputeScreenSpaceRaytrace(normal, roughness, false, ior);
+			refraction = ComputeScreenSpaceRaytrace(normal, roughness, 0.0, false, ior);
 		}
 
 		color.rgb = mix(noDataToRefract, refraction.rgb, vec3(refraction.a));
@@ -688,19 +636,12 @@ void WaterRefraction(inout vec3 color, MaterialMask mask, vec4 viewPos, vec4 vie
 void 	CalculateSpecularReflections(inout vec3 color, vec3 normal, MaterialMask mask, vec3 albedo, float smoothness, float metallic, float skylight, vec3 viewVector, float totalInternalReflectionMask)
 {
 	float specularity = smoothness * smoothness * smoothness;
-	      specularity = max(0.0f, specularity * 1.15f - 0.15f);
+	      specularity = max(0.0, specularity * 1.15f - 0.15f);
 	float roughness = 1.0 - smoothness;
-		  roughness = sqrt(roughness);
-	vec3 specularColor = vec3(1.0f);
 
-	//metallic = pow(metallic, 2.2);
 	metallic = metallic * 0.98 + 0.02;
-	//metallic = pow(metallic, 2.2);
 
 	bool defaultItself = true;
-
-	//if (mask.sky > 0.5)
-		//specularity = 0.0f;
 
 
 	if (mask.water > 0.5)
@@ -721,7 +662,13 @@ void 	CalculateSpecularReflections(inout vec3 color, vec3 normal, MaterialMask m
 	else if(mask.ice > 0.5)
 	{
 		defaultItself = false;
-		specularity = 0.5f;
+		specularity = 0.25f;
+		metallic = 0.0;
+	}
+	else if (mask.slimeBlock > 0.5)
+	{
+		specularity = 0.0;
+		roughness = 0.5;
 		metallic = 0.0;
 	}
 	else
@@ -729,20 +676,13 @@ void 	CalculateSpecularReflections(inout vec3 color, vec3 normal, MaterialMask m
 		skylight = CurveBlockLightSky(texture2D(gdepth, texcoord.st).g);
 	}
 
-	if (mask.slimeBlock > 0.5)
-	{
-		specularity = 0.0;
-		roughness = 1.0;
-	}
-
-
 	vec3 original = color.rgb;
 
 	if (specularity > 0.00f)
 	{
 		if (isEyeInWater > 0 && mask.water > 0.5)
 		{
-			vec4 reflection = ComputeScreenSpaceRaytrace(normal, roughness, true, 0.0);
+			vec4 reflection = ComputeScreenSpaceRaytrace(normal, roughness, metallic, true, 0.0);
 			vec3 colorData = vec3(texture2D(gcolor, texcoord.st).a, texture2D(gnormal, texcoord.st).ba);
 				 colorData = color.rgb * (1.0 - totalInternalReflectionMask)
 				 		   + GammaToLinear(colorData) * (1.0 - reflection.a) * totalInternalReflectionMask;
@@ -754,13 +694,11 @@ void 	CalculateSpecularReflections(inout vec3 color, vec3 normal, MaterialMask m
 		}
 		else
 		{
-			vec4 reflection = ComputeScreenSpaceRaytrace(normal, roughness, false, 0.0);
-			//vec4 reflection = RayTraceReflection(normal, false);
-			//vec4 reflection = vec4(0.0f);
+			vec4 reflection = ComputeScreenSpaceRaytrace(normal, roughness, metallic, false, 0.0);
+
 
 			vec3 reflectVector = reflect(viewVector, normal);
-
-			vec4 fakeSkyReflection = ComputeFakeSky(reflectVector, normal, mask, roughness, 0.0);
+			vec4 fakeSkyReflection = ComputeFakeSky(reflectVector, normal, mask, roughness, metallic, 0.0);
 
 			vec3 noSkyToReflect = vec3(0.0f);
 
@@ -774,15 +712,12 @@ void 	CalculateSpecularReflections(inout vec3 color, vec3 normal, MaterialMask m
 			reflection.a = fakeSkyReflection.a * specularity;
 
 
-			//reflection.rgb *= specularColor;
 			reflection.a = mix(reflection.a, 1.0, metallic);
 			reflection.rgb *= mix(vec3(1.0), albedo.rgb, vec3(metallic));
 
 			color.rgb = mix(color.rgb, reflection.rgb, vec3(reflection.a));
 		}
 	}
-
-	//color.rgb = mix(color.rgb, original, vec3(surface.cloudAlpha));
 }
 
 void TransparentAbsorption(inout vec3 color, MaterialMask mask, vec4 worldSpacePosition, float waterDepth, float opaqueDepth)

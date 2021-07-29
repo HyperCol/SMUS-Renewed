@@ -41,7 +41,7 @@ uniform float nightVision;
 varying float avgSkyBrightness;
 
 
-#include "Common.inc"
+#include "/Common.inc"
 
 float CubicSmooth(in float x)
 {

@@ -24,12 +24,15 @@ Do not modify this code until you have read the LICENSE.txt contained in the roo
 
 #define MICRO_BLOOM // Very fine-scale bloom. Very bright areas will have a fine-scale bleed-over to dark areas.
 
+//#define DEPTH_OF_FIELD
+	#define DOF_STRENGTH 1.0		// Default is 1.0. [0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 2.5 3.0 3.5 4.0]
+
 /////////////////////////END OF CONFIGURABLE VARIABLES/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////END OF CONFIGURABLE VARIABLES/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/* DRAWBUFFERS:67 */
+/* DRAWBUFFERS:467 */
 
-
+const bool gaux3MipmapEnabled = true;
 
 uniform sampler2D gcolor;
 uniform sampler2D gdepthtex;
@@ -39,6 +42,8 @@ uniform sampler2D gnormal;
 uniform sampler2D composite;
 uniform sampler2D gaux3;
 uniform sampler2D noisetex;
+uniform sampler2D depthtex1;
+uniform sampler2D depthtex2;
 
 varying vec4 texcoord;
 varying vec3 lightVector;
@@ -67,6 +72,7 @@ uniform mat4 gbufferPreviousModelView;
 
 uniform vec3 cameraPosition;
 uniform vec3 previousCameraPosition;
+uniform float centerDepthSmooth;
 
 uniform int   isEyeInWater;
 uniform float eyeAltitude;
@@ -85,177 +91,128 @@ uniform float frameTime;
 
 uniform float nightVision;
 
-#include "Common.inc"
+#include "/Common.inc"
 
-
-float 	GetDepthLinear(in vec2 coord) {					//Function that retrieves the scene depth. 0 - 1, higher values meaning farther away
-	return 2.0f * near * far / (far + near - (2.0f * texture2D(gdepthtex, coord).x - 1.0f) * (far - near));
+vec3 GetColor(vec2 coord)
+{
+	return GammaToLinear(texture2D(gnormal, coord).rgb);
 }
 
-vec4 cubic(float x)
-{
-    float x2 = x * x;
-    float x3 = x2 * x;
-    vec4 w;
-    w.x =   -x3 + 3*x2 - 3*x + 1;
-    w.y =  3*x3 - 6*x2       + 4;
-    w.z = -3*x3 + 3*x2 + 3*x + 1;
-    w.w =  x3;
-    return w / 6.f;
+vec3 	GetColorTexture(in vec2 coord) {
+	return GammaToLinear(texture2DLod(gaux3, coord.st, 0).rgb);
 }
 
-vec4 BicubicTexture(in sampler2D tex, in vec2 coord)
+vec3 BlurV(vec2 coord)
 {
 
-	coord *= resolution;
+	vec3 color = vec3(0.0);
 
-	float fx = fract(coord.x);
-    float fy = fract(coord.y);
-    coord.x -= fx;
-    coord.y -= fy;
+	float weights[5] = float[5](0.27343750, 0.21875000, 0.10937500, 0.03125000, 0.00390625);
+	float offsets[5] = float[5](0.00000000, 1.00000000, 2.00000000, 3.00000000, 4.00000000);
 
-    fx -= 0.5;
-    fy -= 0.5;
+	color += GetColor(coord) * weights[0];
 
-    vec4 xcubic = cubic(fx);
-    vec4 ycubic = cubic(fy);
-
-    vec4 c = vec4(coord.x - 0.5, coord.x + 1.5, coord.y - 0.5, coord.y + 1.5);
-    vec4 s = vec4(xcubic.x + xcubic.y, xcubic.z + xcubic.w, ycubic.x + ycubic.y, ycubic.z + ycubic.w);
-    vec4 offset = c + vec4(xcubic.y, xcubic.w, ycubic.y, ycubic.w) / s;
-
-    vec4 sample0 = texture2D(tex, vec2(offset.x, offset.z) / resolution);
-    vec4 sample1 = texture2D(tex, vec2(offset.y, offset.z) / resolution);
-    vec4 sample2 = texture2D(tex, vec2(offset.x, offset.w) / resolution);
-    vec4 sample3 = texture2D(tex, vec2(offset.y, offset.w) / resolution);
-
-    float sx = s.x / (s.x + s.y);
-    float sy = s.z / (s.z + s.w);
-
-    return mix( mix(sample3, sample2, sx), mix(sample1, sample0, sx), sy);
-}
-
-vec3 GetBloomTap(vec2 coord, const float octave, const vec2 offset)
-{
-	float scale = exp2(octave);
-
-	coord /= scale;
-	coord -= offset;
-
-	return GammaToLinear(BicubicTexture(gaux1, coord).rgb);
-}
-
-vec2 CalcOffset(float octave)
-{
-    vec2 offset = vec2(0.0);
-
-    vec2 padding = vec2(30.0) * texel;
-
-    offset.x = -min(1.0, floor(octave / 3.0)) * (0.25 + padding.x);
-
-    offset.y = -(1.0 - (1.0 / exp2(octave))) - padding.y * octave;
-
-	offset.y += min(1.0, floor(octave / 3.0)) * 0.35;
-
- 	return offset;
-}
-
-
-
-vec3 GetBloom(vec2 coord)
-{
-	vec3 bloom = vec3(0.0);
-
-	bloom += GetBloomTap(coord, 1.0, CalcOffset(0.0)) * 2.0;
-	bloom += GetBloomTap(coord, 2.0, CalcOffset(1.0)) * 1.5;
-	bloom += GetBloomTap(coord, 3.0, CalcOffset(2.0)) * 1.2;
-	bloom += GetBloomTap(coord, 4.0, CalcOffset(3.0)) * 1.3;
-	bloom += GetBloomTap(coord, 5.0, CalcOffset(4.0)) * 1.4;
-	bloom += GetBloomTap(coord, 6.0, CalcOffset(5.0)) * 1.5;
-	bloom += GetBloomTap(coord, 7.0, CalcOffset(6.0)) * 1.6;
-	bloom += GetBloomTap(coord, 8.0, CalcOffset(7.0)) * 1.7;
-	bloom += GetBloomTap(coord, 9.0, CalcOffset(8.0)) * 0.4;
-
-	bloom /= 12.6;
-
-
-	//bloom = mix(bloom, vec3(dot(bloom, vec3(0.3333))), vec3(-0.1));
-	//bloom = mix(bloom, vec3(dot(bloom, vec3(0.3333))), vec3(0.1));
-
-	//bloom = length(bloom) * pow(normalize(bloom + 0.00001), vec3(1.5));
-
-	return bloom;
-}
-
-void FogScatter(inout vec3 color, in vec3 bloomData)
-{
-	float linearDepth = GetDepthLinear(texcoord.st);
-	float ifIsInWater = saturate(isEyeInWater);
-
-	float fogDensity = 0.0125 * rainStrength * (1.0 - ifIsInWater);
-	fogDensity += ifIsInWater * 0.75;
-
-	float visibility = 1.0 / (pow(exp(linearDepth * fogDensity), 1.0f));
-	float fogFactor = 1.0 - visibility;
-		  fogFactor = saturate(fogFactor);
-
-	fogFactor *= 1.0 + ifIsInWater * (mix(0.0f, 1.0f, pow(eyeBrightnessSmooth.y / 240.0f, 6.0f)) - 1.0);
-
-	color = mix(color, bloomData, vec3((0.08 + fogFactor) * BLOOM_AMOUNT));
-}
-
-void MicroBloom(inout vec3 color, in vec2 uv)
-{
-
-	vec3 bloom = vec3(0.0);
-	float allWeights = 0.0f;
-
-	for (int i = 0; i < 4; i++)
+	for (int i = 1; i < 5; i++)
 	{
-		for (int j = 0; j < 4; j++)
-		{
-			float weight = 1.0f - distance(vec2(i, j), vec2(2.5f)) / 2.5;
-				  weight = clamp(weight, 0.0f, 1.0f);
-				  weight = 1.0f - cos(weight * 3.1415 / 2.0f);
-				  weight = pow(weight, 2.0f);
-			vec2 coord = vec2(i - 2.5, j - 2.5);
-				 coord *= texel;
-
-			vec2 finalCoord = (uv.st + coord.st * 1.0);
-
-			if (weight > 0.0f)
-			{
-				bloom += pow(clamp(texture2DLod(gaux3, finalCoord, 0).rgb, vec3(0.0f), vec3(1.0f)), vec3(2.2f)) * weight;
-				allWeights += 1.0f * weight;
-			}
-		}
+		color += GetColor(coord + vec2(0.0, offsets[i] * 1.0) * texel) * weights[i];
+		color += GetColor(coord - vec2(0.0, offsets[i] * 1.0) * texel) * weights[i];
 	}
-	bloom /= allWeights;
 
-	color = mix(color, bloom, vec3(0.35));
+	return color;
+}
+
+vec3 	DepthOfField(in vec3 color)
+{
+
+	float depth1 = texture2D(depthtex1, texcoord.st).x;
+	float depth2 = texture2D(depthtex2, texcoord.st).x;
+	color = GammaToLinear(color);
+
+	if(depth2 > depth1)
+	{
+		return color;
+	}
+	const float bias = 0.15;	//aperture - bigger values for shallower depth of field
+
+
+	vec2 aspectcorrect = vec2(1.0, aspectRatio) * 1.5;
+
+	float factor = depth1 - centerDepthSmooth;
+
+	vec2 dofblur = vec2(factor * bias) * 0.6 * DOF_STRENGTH;
+
+
+	vec3 col = color;
+
+	col += GetColorTexture(texcoord.st + (vec2( 0.0,0.4 )*aspectcorrect) * dofblur);
+	col += GetColorTexture(texcoord.st + (vec2( 0.15,0.37 )*aspectcorrect) * dofblur);
+	col += GetColorTexture(texcoord.st + (vec2( 0.29,0.29 )*aspectcorrect) * dofblur);
+	col += GetColorTexture(texcoord.st + (vec2( -0.37,0.15 )*aspectcorrect) * dofblur);
+	col += GetColorTexture(texcoord.st + (vec2( 0.4,0.0 )*aspectcorrect) * dofblur);
+	col += GetColorTexture(texcoord.st + (vec2( 0.37,-0.15 )*aspectcorrect) * dofblur);
+	col += GetColorTexture(texcoord.st + (vec2( 0.29,-0.29 )*aspectcorrect) * dofblur);
+	col += GetColorTexture(texcoord.st + (vec2( -0.15,-0.37 )*aspectcorrect) * dofblur);
+	col += GetColorTexture(texcoord.st + (vec2( 0.0,-0.4 )*aspectcorrect) * dofblur);
+	col += GetColorTexture(texcoord.st + (vec2( -0.15,0.37 )*aspectcorrect) * dofblur);
+	col += GetColorTexture(texcoord.st + (vec2( -0.29,0.29 )*aspectcorrect) * dofblur);
+	col += GetColorTexture(texcoord.st + (vec2( 0.37,0.15 )*aspectcorrect) * dofblur);
+	col += GetColorTexture(texcoord.st + (vec2( -0.4,0.0 )*aspectcorrect) * dofblur);
+	col += GetColorTexture(texcoord.st + (vec2( -0.37,-0.15 )*aspectcorrect) * dofblur);
+	col += GetColorTexture(texcoord.st + (vec2( -0.29,-0.29 )*aspectcorrect) * dofblur);
+	col += GetColorTexture(texcoord.st + (vec2( 0.15,-0.37 )*aspectcorrect) * dofblur);
+
+	col += GetColorTexture(texcoord.st + (vec2( 0.15,0.37 )*aspectcorrect) * dofblur*0.9);
+	col += GetColorTexture(texcoord.st + (vec2( -0.37,0.15 )*aspectcorrect) * dofblur*0.9);
+	col += GetColorTexture(texcoord.st + (vec2( 0.37,-0.15 )*aspectcorrect) * dofblur*0.9);
+	col += GetColorTexture(texcoord.st + (vec2( -0.15,-0.37 )*aspectcorrect) * dofblur*0.9);
+	col += GetColorTexture(texcoord.st + (vec2( -0.15,0.37 )*aspectcorrect) * dofblur*0.9);
+	col += GetColorTexture(texcoord.st + (vec2( 0.37,0.15 )*aspectcorrect) * dofblur*0.9);
+	col += GetColorTexture(texcoord.st + (vec2( -0.37,-0.15 )*aspectcorrect) * dofblur*0.9);
+	col += GetColorTexture(texcoord.st + (vec2( 0.15,-0.37 )*aspectcorrect) * dofblur*0.9);
+
+	col += GetColorTexture(texcoord.st + (vec2( 0.29,0.29 )*aspectcorrect) * dofblur*0.7);
+	col += GetColorTexture(texcoord.st + (vec2( 0.4,0.0 )*aspectcorrect) * dofblur*0.7);
+	col += GetColorTexture(texcoord.st + (vec2( 0.29,-0.29 )*aspectcorrect) * dofblur*0.7);
+	col += GetColorTexture(texcoord.st + (vec2( 0.0,-0.4 )*aspectcorrect) * dofblur*0.7);
+	col += GetColorTexture(texcoord.st + (vec2( -0.29,0.29 )*aspectcorrect) * dofblur*0.7);
+	col += GetColorTexture(texcoord.st + (vec2( -0.4,0.0 )*aspectcorrect) * dofblur*0.7);
+	col += GetColorTexture(texcoord.st + (vec2( -0.29,-0.29 )*aspectcorrect) * dofblur*0.7);
+	col += GetColorTexture(texcoord.st + (vec2( 0.0,0.4 )*aspectcorrect) * dofblur*0.7);
+
+	col += GetColorTexture(texcoord.st + (vec2( 0.29,0.29 )*aspectcorrect) * dofblur*0.4);
+	col += GetColorTexture(texcoord.st + (vec2( 0.4,0.0 )*aspectcorrect) * dofblur*0.4);
+	col += GetColorTexture(texcoord.st + (vec2( 0.29,-0.29 )*aspectcorrect) * dofblur*0.4);
+	col += GetColorTexture(texcoord.st + (vec2( 0.0,-0.4 )*aspectcorrect) * dofblur*0.4);
+	col += GetColorTexture(texcoord.st + (vec2( -0.29,0.29 )*aspectcorrect) * dofblur*0.4);
+	col += GetColorTexture(texcoord.st + (vec2( -0.4,0.0 )*aspectcorrect) * dofblur*0.4);
+	col += GetColorTexture(texcoord.st + (vec2( -0.29,-0.29 )*aspectcorrect) * dofblur*0.4);
+	col += GetColorTexture(texcoord.st + (vec2( 0.0,0.4 )*aspectcorrect) * dofblur*0.4);
+
+	return col/41.0;
+
 }
 
 /////////////////////////MAIN//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////MAIN//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void main() {
 
-	vec3 color = GammaToLinear(texture2DLod(gaux3, texcoord.st, 0).rgb);
+	vec3 bloomColor = vec3(0.0);
 
-	//color = mix(color, GetBloom(coord.st), vec3(0.16 * BLOOM_AMOUNT + isEyeInWater * 0.7));
 #ifdef BLOOM_ENABLED
-	vec3 bloomData = GetBloom(texcoord.st);
-	FogScatter(color, bloomData);
+	bloomColor = BlurV(texcoord.st);
 
-	#ifdef MICRO_BLOOM
-		MicroBloom(color, texcoord.st);
-	#endif
+	bloomColor = LinearToGamma(bloomColor);
 #endif
 
+vec4 color = texture2DLod(gaux3, texcoord.st, 0);
 
-	color = LinearToGamma(color);
+#ifdef DEPTH_OF_FIELD
+	color.rgb = LinearToGamma(DepthOfField(color.rgb));
+#endif
 
-	gl_FragData[0] = vec4(color, 1.0);
+	gl_FragData[0] = vec4(bloomColor.rgb, 1.0f);
+	gl_FragData[1] = color;
 	//Write color for previous frame here
-	gl_FragData[1] = texture2D(gaux3, texcoord.st).rgba;
+	gl_FragData[2] = texture2D(gaux3, texcoord.st);
 
 }

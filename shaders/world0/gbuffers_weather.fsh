@@ -2,43 +2,43 @@
 
 
 uniform sampler2D texture;
-uniform sampler2D lightmap;
 
 varying vec4 color;
 varying vec4 texcoord;
-varying vec4 lmcoord;
 
-/* DRAWBUFFERS:0 */
+uniform sampler2D gaux3;
+uniform vec2 resolution;
+
+/* DRAWBUFFERS:6 */
+
+float Luminance(in vec3 color)
+{
+	//return dot(color.rgb, vec3(0.2125f, 0.7154f, 0.0721f));
+	return dot(color, vec3(0.3333));
+}
 
 void main() {
-
 	//discard;
-	//gl_FragData[0] = vec4(texture2D(texture, texcoord.st).rgb, texture2D(texture, texcoord.st).a * 1.0f) * color;
-	gl_FragData[0] = vec4(vec3(0.5), texture2D(texture, texcoord.st).a) * color;
-		
+
+	vec4 rain = texture2D(texture, texcoord.st) * color;
+	vec3 screen  = vec3(0.0);
+	int count = 0;
+
+	for(float i = 0.0; i <= 1.0; i += 0.125)
+	{
+		for(float j = 0.0; j <= 1.0; j += 0.125)
+		{
+			screen += texture2D(gaux3, vec2(i, j)).rgb;
+			count++;
+		}
+	}
+
+	screen /= float(count);
+
+	float brightness = Luminance(screen);
+
+	rain.rgb = normalize(pow(rain.rgb, vec3(0.25))) * brightness;
 	
-	
-	
-	
-	
-	/*
-	//store lightmap in auxilliary texture. r = torch light. g = lightning. b = sky light.
-	
-	vec3 lightmaptorch = texture2D(lightmap, vec2(lmcoord.s, 0.00f)).rgb;
-	vec3 lightmapsky   = texture2D(lightmap, vec2(0.0f, lmcoord.t)).rgb;
-	
-	//vec4 lightmap = texture2D(lightmap, lmcoord.st);
-	vec4 lightmap = vec4(0.0f, 0.0f, 0.0f, 1.0f);
-	
-	//Separate lightmap types
-	lightmap.r = dot(lightmaptorch, vec3(1.0f));
-	lightmap.b = dot(lightmapsky, vec3(1.0f));
-	*/
-	
-	
-	
-	//gl_FragData[5] = vec4(lightmap.rgb, texture2D(texture, texcoord.st).a * color.a * 0.0f);
-	//gl_FragData[6] = vec4(0.0f, 0.0f, 1.0f, 0.0f);
-	//gl_FragData[7] = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+	gl_FragData[0] = rain;
 		
 }

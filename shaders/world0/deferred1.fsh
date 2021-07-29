@@ -27,13 +27,13 @@ Do not modify this code until you have read the LICENSE.txt contained in the roo
 
 #define GI_RENDER_RESOLUTION 1 // Render resolution of GI. 0 = High. 1 = Low. Set to 1 for faster but blurrier GI. [0 1]
 
-#define WATER_REFRACT_IOR 1.2
-
 #define POINTLIGHT_FILL 2.0 // Amount of fill/ambient light to add to point light falloff. Higher values makes point light dim less intensely based on distance. [0.5 1.0 2.0 4.0 8.0]
 
 #define POINTLIGHT_BRIGHTNESS 1.0 // Brightness of point light. [0.5 1.0 2.0 3.0 4.0]
 
 #define TAA_ENABLED // Temporal Anti-Aliasing. Utilizes multiple rendered frames to reconstruct an anti-aliased image similar to supersampling. Can cause some artifacts.
+
+//#define SHADOW_TAA
 
 #define SUNLIGHT_INTENSITY 1.0 // Intensity of sunlight. [0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
 
@@ -179,7 +179,7 @@ varying float heldLightBlacklist;
 uniform vec2 taaJitter;
 uniform float taaStrength;
 
-#include "Common.inc"
+#include "/Common.inc"
 
 /////////////////////////FUNCTIONS/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////FUNCTIONS/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -455,6 +455,13 @@ vec3 WorldPosToShadowProjPosBias(vec3 worldPos, vec3 worldNormal, out float dist
 	shadowPos.xyz += sn * 0.008 * distortFactor;
 	shadowPos.xy *= 0.95f / distortFactor;
 	shadowPos.z = mix(shadowPos.z, 0.5, 0.8);
+
+#ifdef TAA_ENABLED
+#ifdef SHADOW_TAA
+	shadowPos.st += taaJitter;
+#endif
+#endif
+
 	shadowPos = shadowPos * 0.5f + 0.5f;		//Transform from shadow space to shadow map coordinates
 
 	return shadowPos.xyz;
@@ -565,6 +572,12 @@ vec3 CalculateSunlightVisibility(vec4 viewPos, MaterialMask mask, vec3 normal) {
 		//diffthresh *= avgDepth * 50.0f + 0.5f;
 
 
+	#ifdef TAA_ENABLED
+	#ifdef SHADOW_TAA
+		noise.x = saturate(noise.x) * 2.0 - 1.0;
+		shadowProjPos.z += noise.x * sqrt(spread) * 0.075 / distortFactor;
+	#endif
+	#endif
 
 
 		noise += 0.5;
@@ -663,9 +676,9 @@ vec4 BilateralUpsample(const in float scale, in vec2 offset, in float depth, in 
 	vec4 light = vec4(0.0f);
 	float weights = 0.0f;
 
-	for (float i = -0.5f; i <= 0.5f; i += 1.0f)
+	for (float i = -0.5f; i <= 0.5f; i++)
 	{
-		for (float j = -0.5f; j <= 0.5f; j += 1.0f)
+		for (float j = -0.5f; j <= 0.5f; j++)
 		{
 			vec2 coord = vec2(i, j) * recipres * 2.0f;
 
@@ -1186,7 +1199,6 @@ void main()
 
 	//GI
 	vec4 gi = GetGI(gbuffer.albedo, gbuffer.normal, gbuffer.depth, gbuffer.mcLightmap.g);
-	// vec4 gi = vec4(0.0, 0.0, 0.0, 1.0);
 
 	vec3 fakeGI = normalize(gbuffer.albedo + 0.0001) * pow(length(gbuffer.albedo), 1.0) * colorSunlight * 0.08 * gbuffer.mcLightmap.g;
 	float fakeGIFade = saturate((shadowDistance * 0.1 * 1.0) - length(viewPos) * 0.1);
@@ -1194,10 +1206,6 @@ void main()
 	gi.rgb = mix(fakeGI, gi.rgb, vec3(fakeGIFade));
 
 	float ao = gi.a;
-	//float ao = 1.0;
-
-	//gi.rgb *= ao;
-
 
 
 
@@ -1311,7 +1319,7 @@ void main()
 	if (skyChecker)
 	{
 
-		//float albedoCheck = saturate(sign(Luminance(gbuffer.albedo)));
+		float albedoCheck = sign(Luminance(gbuffer.albedo));
 		//vec3 albedoForSky = 1.0 + albedoCheck * (gbuffer.albedo - 1.0);
 		finalComposite += atmosphere * 0.8;
 		//finalComposite += mix(atmosphere, atmosphere * albedoForSky, albedoCheck * 0.5);

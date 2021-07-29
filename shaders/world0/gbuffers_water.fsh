@@ -89,14 +89,14 @@ varying float isSlimeBlock;
 
 uniform float nightVision;
 
-#include "Common.inc"
+#include "/Common.inc"
 
 #define ANIMATION_SPEED 1.0f
 
 
 /* DRAWBUFFERS:02345 */
 
-#include "lib/Waves.glsl"
+#include "/lib/Waves.glsl"
 
 vec3 GetWaterParallaxCoord(in vec3 position, in vec3 viewVector)
 {

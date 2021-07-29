@@ -58,7 +58,7 @@ uniform int heldItemId;
 
 uniform float nightVision;
 
-#include "Common.inc"
+#include "/Common.inc"
 
 float CubicSmooth(in float x)
 {

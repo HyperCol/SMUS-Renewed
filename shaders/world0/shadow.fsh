@@ -30,9 +30,9 @@ varying float isSlimeBlock;
 
 varying vec4 lmcoord;
 
-#include "Common.inc"
+#include "/Common.inc"
 
-#include "lib/Waves.glsl"
+#include "/lib/Waves.glsl"
 
 vec3 GetWavesNormal(vec3 position) {
 

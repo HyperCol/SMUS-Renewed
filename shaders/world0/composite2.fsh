@@ -79,7 +79,7 @@ varying vec3 colorSkylight;
 
 uniform float nightVision;
 
-#include "Common.inc"
+#include "/Common.inc"
 
 vec3 GetColor(vec2 coord)
 {

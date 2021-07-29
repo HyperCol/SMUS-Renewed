@@ -38,7 +38,7 @@ uniform sampler2D noisetex;
 
 uniform float nightVision;
 
-#include "Common.inc"
+#include "/Common.inc"
 
 void main()
 {

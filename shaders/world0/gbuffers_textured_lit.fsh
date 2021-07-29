@@ -66,7 +66,7 @@ varying vec3 viewPos;
 
 uniform float nightVision;
 
-#include "Common.inc"
+#include "/Common.inc"
 
 float CurveBlockLightTorch(float blockLight)
 {

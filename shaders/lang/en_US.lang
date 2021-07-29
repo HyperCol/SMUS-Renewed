@@ -138,12 +138,15 @@ option.MOTION_BLUR=动态模糊效果(拖影效果)
 option.MOTION_BLUR_SAMPLES=动态模糊采样
 option.MOTIONBLUR_STRENGTH=动态模糊强度
 option.MOTION_BLUR_PVP_MODE=PvP模式动态模糊
+option.DEPTH_OF_FIELD=焦外浅景深效果
+option.DOF_STRENGTH=景深模糊强度
 
 profile.LOW=低配
 profile.MEDIUM=中配
-profile.HIGH=高配(未完成)
-profile.ULTRA=超高配(未完成)
-profile.CINEMATIC=影院级(显卡杀手)
+profile.HIGH=高配
+profile.ULTRA=超高配
+profile.CINEMATIC=影院级
+profile.GPU_KILLER=显卡杀手
 
 screen.LIGHTING=光照部分
 screen.DIRECT=直接光照(光源直射)部分
@@ -161,6 +164,7 @@ screen.TAA=时域性抗锯齿(去狗牙处理)
 screen.BLOOM=泛光
 screen.MB=动态模糊(拖影效果)
 screen.DOF=焦外浅景深效果(模糊背景效果)
+
 
 option.AUTHOR=作者
 option.DEV_TEAM=团队

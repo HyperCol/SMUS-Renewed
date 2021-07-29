@@ -101,7 +101,7 @@ uniform mat4 gbufferProjectionInverse;
 
 uniform float nightVision;
 
-#include "Common.inc"
+#include "/Common.inc"
 
 float CurveBlockLightTorch(float blockLight)
 {
@@ -461,7 +461,11 @@ void AutoNormalSpec(vec2 textureCoordinate, vec2 texGradX, vec2 texGradY, out ve
 	float metalness = autoMaterialProperties.w;
 
 	ivec2 atlasResolution = atlasSize;
+#if MC_VERSION < 11400
 	int tileResolution = atlasResolution.y / 32;
+#else
+	int tileResolution = atlasResolution.y / 64;
+#endif
 	ivec2 atlasTiles = atlasResolution / tileResolution;
 
 
@@ -586,7 +590,11 @@ void main()
 	 	//ivec2 atlasResolution = textureSize(texture, 0);
 	 	//ivec2 atlasTiles = atlasResolution / tileResolution;
 		ivec2 atlasResolution = atlasSize;
+	#if MC_VERSION < 11400
 		int tileResolution = atlasResolution.y / 32;
+	#else
+		int tileResolution = atlasResolution.y / 64;
+	#endif
 		ivec2 atlasTiles = atlasResolution / tileResolution;
 		float atlasAspectRatio = atlasTiles.x / atlasTiles.y;
 			viewVector.y *= atlasAspectRatio;

@@ -31,7 +31,7 @@ Do not modify this code until you have read the LICENSE.txt contained in the roo
 
 #define MOTION_BLUR // Motion blur. Makes motion look blurry.
 	//#define MOTION_BLUR_PVP_MODE
-	#define MOTION_BLUR_SAMPLES 4.0  //Motion blur samples. [4.0 8.0 16.0 24.0 32.0 48.0 64.0 128.0 256.0 512.0 1024.0]
+	#define MOTION_BLUR_SAMPLES 8.0  //Motion blur samples. [4.0 8.0 16.0 24.0 32.0 48.0 64.0 128.0 256.0 512.0 1024.0]
 	#define MOTIONBLUR_STRENGTH 1.0		// Default is 1.0. [0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 2.5 3.0 3.5 4.0]
 
 #define TONEMAP_OPERATOR UchimuraTonemap // Each tonemap operator defines a different way to present the raw internal HDR color information to a color range that fits nicely with the limited range of monitors/displays. Each operator gives a different feel to the overall final image. [SEUSTonemap UchimuraTonemap HableTonemap ACESTonemap ACESTonemap2]
@@ -100,21 +100,15 @@ uniform vec3 skyColor;
 
 uniform float nightVision;
 
-#include "Common.inc"
+#include "/Common.inc"
 
-const float overlap = 0.2;
+const mat3 coneOverlap = mat3(1.0, 	 0.02, 0.002,
+							  0.02,  1.0,  0.002,
+							  0.002, 0.02, 1.0);
 
-const float rgOverlap = 0.1 * overlap;
-const float rbOverlap = 0.01 * overlap;
-const float gbOverlap = 0.04 * overlap;
-
-const mat3 coneOverlap = mat3(1.0, 			rgOverlap, 	rbOverlap,
-							  rgOverlap, 	1.0, 		gbOverlap,
-							  rbOverlap, 	rgOverlap, 	1.0);
-
-const mat3 coneOverlapInverse = mat3(	1.0 + (rgOverlap + rbOverlap), 			-rgOverlap, 	-rbOverlap,
-									  	-rgOverlap, 		1.0 + (rgOverlap + gbOverlap), 		-gbOverlap,
-									  	-rbOverlap, 		-rgOverlap, 	1.0 + (rbOverlap + rgOverlap));
+const mat3 coneOverlapInverse = mat3( 1.022, -0.02,  -0.002,
+									 -0.02,   1.022, -0.002,
+									 -0.002, -0.02,   1.022);
 
 
 
@@ -131,30 +125,12 @@ vec3 SEUSTonemap(vec3 color)
 	color = color * coneOverlap;
 
 
-
-	const float p = 5.0;
-	color = pow(color, vec3(p));
+	color = pow(color, vec3(5.0));
 	color = color / (1.0 + color);
-	color = pow(color, vec3(1.0 / p));
-
-
-	// color = mix(color, color * color * (3.0 - 2.0 * color), vec3(0.0));
-
-	//color = pow(color, vec3(1.0 / 2.0));
-	//color = mix(color, color * color * (3.0 - 2.0 * color), vec3(0.1));
-	//color = pow(color, vec3(2.0));
-
-	//color = color * 0.5 + 0.5;
-	//color = mix(color, color * color * (3.0 - 2.0 * color), vec3(0.8));
-	//color = saturate(color * 2.0 - 1.0);
+	color = pow(color, vec3(0.2));
 
 	color = color * coneOverlapInverse;
 	color = saturate(color);
-
-
-	// color.r = almostIdentity(color.r, 0.05, 0.0);
-	// color.g = almostIdentity(color.g, 0.05, 0.0);
-	// color.b = almostIdentity(color.b, 0.05, 0.0);
 
 	return color;
 }
@@ -168,9 +144,9 @@ vec3 SEUSTonemap(vec3 color)
 vec3 UchimuraTonemap(vec3 color) {
     const float maxDisplayBrightness = 0.9;   // max display brightness Default:1.2
     const float contrast             = 1.0;   // contrast Default:0.625
-    const float linearStart          = 0.175;  // linear section start Default:0.1
-    const float linearLength         = 0.25;    // linear section length Default:0.0
-    const float black                = 1.25;  // black Default:1.33
+    const float linearStart          = 0.5;  // linear section start Default:0.1
+    const float linearLength         = 0.0;    // linear section length Default:0.0
+    const float black                = 1.0;  // black Default:1.33
     const float pedestal             = 0.0;    // pedestal
 
     float l0 = ((maxDisplayBrightness - linearStart) * linearLength) / contrast;
@@ -189,12 +165,12 @@ vec3 UchimuraTonemap(vec3 color) {
     vec3 S = maxDisplayBrightness - (maxDisplayBrightness - S1) * exp(CP * (color - S0));
     vec3 L = linearStart + contrast * (color - linearStart);
 
-	color = color * coneOverlap;
+	//color = color * coneOverlap;
 
     color = T * w0 + L * w1 + S * w2;
 
 	// Clamp to [0, 1]
-	color = color * coneOverlapInverse;
+	//color = color * coneOverlapInverse;
     color = saturate(color);
 
 	return color;
@@ -208,7 +184,6 @@ vec3 HableTonemap(vec3 x)
 {
 
 	x = x * coneOverlap;
-
 	x *= 1.5;
 
 	const float A = 0.15;
@@ -236,8 +211,8 @@ vec3 HableTonemap(vec3 x)
 //	ACES Fitting by Stephen Hill
 vec3 RRTAndODTFit(vec3 v)
 {
-    vec3 a = v * (v + 0.0245786f) - 0.000090537f;
-    vec3 b = v * (1.0f * v + 0.4329510f) + 0.238081f;
+    vec3 a = v * (v + 0.0245786f) - 0.000090537;
+    vec3 b = v * (1.0f * v + 0.4329510f) + 0.238081;
     return a / b;
 }
 
@@ -282,36 +257,6 @@ vec3 ACESTonemap(vec3 color)
 	return color;
 }
 
-vec3 Tonemap2(vec3 color)
-{
-	color *= 1.3;
-
-	const float p = 2.9;
-	color = pow(color, vec3(p));
-	color = color / (1.0 + color);
-	color = pow(color, vec3(1.0 / p));
-
-
-	color = mix(color, color * color * (3.0 - 2.0 * color), vec3(0.0));
-
-	color = pow(color, vec3(1.0 / 2.0));
-	color = mix(color, color * color * (3.0 - 2.0 * color), vec3(0.1));
-	color = pow(color, vec3(2.0));
-
-	//color = color * 0.5 + 0.5;
-	//color = mix(color, color * color * (3.0 - 2.0 * color), vec3(0.8));
-	//color = saturate(color * 2.0 - 1.0);
-
-
-
-
-
-
-	return color;
-}
-
-
-
 vec3 	CalculateNoisePattern1(vec2 offset, float size)
 {
 	vec2 coord = texcoord.st;
@@ -330,82 +275,69 @@ void 	MotionBlur(inout vec3 color)
 
 	if(depth2 > depth1)
 	{
-		color = GammaToLinear(texture2DLod(gaux3, texcoord.st, 0.0).rgb);
 		return;
 	}
 
 	vec4 currentPosition = vec4(texcoord.st * 2.0 - 1.0, depth2 * 2.0 - 1.0, 1.0);
 
 	vec4 fragposition = gbufferProjectionInverse * currentPosition;
-	fragposition = gbufferModelViewInverse * fragposition;
-	fragposition /= fragposition.w;
+		 fragposition = gbufferModelViewInverse * fragposition;
+	fragposition.xyz /= fragposition.w;
 	fragposition.xyz += cameraPosition;
 
 	vec4 previousPosition = fragposition;
 	previousPosition.xyz -= previousCameraPosition;
 	previousPosition = gbufferPreviousModelView * previousPosition;
 	previousPosition = gbufferPreviousProjection * previousPosition;
-	previousPosition /= previousPosition.w;
+	previousPosition.xyz /= previousPosition.w;
 
-	float intensity = MOTIONBLUR_STRENGTH * 0.5;
+	float intensity = MOTIONBLUR_STRENGTH * 0.125;
 	vec2 velocity = currentPosition.xy - previousPosition.xy;
-		 //velocity = (exp(abs(velocity)) - 1.0) * sign(velocity) * intensity;
 
 #ifdef MOTION_BLUR_PVP_MODE
-	float blurAmount = intensity * 0.04;
+	float blurAmount = intensity * 0.08;
 	velocity *= clamp(length(velocity), -blurAmount, blurAmount) / length(velocity);
 #endif
 
 	if(length(velocity) < 0.00001)
 	{
-		color = GammaToLinear(texture2DLod(gaux3, texcoord.st, 0.0).rgb);
 		return;
 	}
 
-	float dither = rand(texcoord.st).x * 1.0;
-
-	color.rgb = vec3(0.0);
+	float dither = rand(texcoord.st).x;
 
 	float samples = MOTION_BLUR_SAMPLES;
+	float count = 1.0;
 
-	for (float i = 0.0; i < samples; i++) {
-		vec2 coord = texcoord.st + velocity * ((i + dither) / samples);
-			 //coord = saturate(coord);
+	while(count < samples) {
+		vec2 coord = texcoord.st + velocity * ((count + dither) / samples);
+
+		if(coord != saturate(coord))
+		{
+			break;
+		}
 
 		color += GammaToLinear(texture2DLod(gaux3, coord, 0.0).rgb);
+		count++;
 	}
 
-	color.rgb /= samples;
+	color.rgb /= count;
 
 
-}
-
-void CalculateExposureEyeBrightness(inout vec3 color)
-{
-	float exposureMax = 1.55f;
-		  //exposureMax *= mix(1.0f, 0.25f, timeSunriseSunset);
-		  //exposureMax *= mix(1.0f, 0.0f, timeMidnight);
-		  //exposureMax *= mix(1.0f, 0.25f, rainStrength);
-		  exposureMax *= avgSkyBrightness * 2.0;
-	float exposureMin = 0.07f;
-	float exposure = pow(eyeBrightnessSmooth.y / 240.0f, 6.0f) * exposureMax + exposureMin;
-
-	//exposure = 1.0f;
-
-	color.rgb /= vec3(exposure);
-	color.rgb *= 350.0;
 }
 
 void AverageExposure(inout vec3 color)
 {
-	float avglod = int(log2(min(resolution.x, resolution.y))) - 0;
-	//color /= pow(Luminance(texture2DLod(gaux3, vec2(0.5, 0.5), avglod).rgb), 1.18) * 1.2 + 0.00000005;
+	float avglod = log2(min(resolution.x, resolution.y) * 0.625);
 
-	float avgLumPow = 1.1;
-	float exposureMax = 0.9;
-	float exposureMin = 0.00005;
+	float exposureMax = 16.0;
+	float exposureMin = 0.0;
+	float exposureAvg = 0.375;
 
-	color /= pow(Luminance(texture2DLod(gaux3, vec2(0.5, 0.5), avglod).rgb), avgLumPow) * exposureMax + exposureMin;
+	float exposure = Luminance(GammaToLinear(texture2DLod(gaux3, vec2(0.5), avglod).rgb) * 40000.0);
+		  exposure = clamp(1.0 / exposure, exposureMin, exposureMax);
+
+	color *= exposure * 40000.0 * exposureAvg;
 }
 
 void 	Vignette(inout vec3 color) {
@@ -457,18 +389,12 @@ void Overlay(inout vec3 color, vec3 overlayColor)
 void main() {
 	vec2 coord = texcoord.st;
 
-	vec3 color = vec3(0.0);
+	vec3 color = GammaToLinear(texture2DLod(gaux3, coord.st, 0).rgb);
 	#ifdef MOTION_BLUR
 		MotionBlur(color);
-	#else
-		color = GammaToLinear(texture2DLod(gaux3, coord.st, 0).rgb);
 	#endif
 
 	AverageExposure(color);
-
-	// color = pow(color, vec3(0.8));
-
-	color *= 34.0 * EXPOSURE;
 
 
 	color = TONEMAP_OPERATOR(color);
@@ -483,18 +409,6 @@ void main() {
 
 
 	color = mix(color, vec3(Luminance(color)), vec3(1.0 - SATURATION));
-
-
-
-
-
-	//color += rand(coord.st) * (1.0 / 255.0);
-
-
-
-	// color = (floor(color * 16.0)) / 16.0;
-
-	// color = texture2D(shadowcolor0, texcoord.st).rgb;
 
 
 	gl_FragColor = vec4(color.rgb, 1.0f);
