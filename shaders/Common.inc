@@ -2,25 +2,7 @@
 #define DEV_TEAM HyperCol
 #define VERSION 0.4.2
 
-float saturate(float x)
-{
-	return clamp(x, 0.0, 1.0);
-}
-
-vec4 saturate(vec4 x)
-{
-	return clamp(x, vec4(0.0), vec4(1.0));
-}
-
-vec3 saturate(vec3 x)
-{
-	return clamp(x, vec3(0.0), vec3(1.0));
-}
-
-vec2 saturate(vec2 x)
-{
-	return clamp(x, vec2(0.0), vec2(1.0));
-}
+#define saturate(x) clamp(x, 0.0, 1.0)
 
 vec2 EncodeNormal(vec3 normal)
 {
@@ -32,11 +14,9 @@ vec3 DecodeNormal(vec2 enc)
 {
 	vec2 fenc = enc * 4.0 - 2.0;
 	float f = dot(fenc, fenc);
-	float g = sqrt(1.0 - f / 4.0);
-	vec3 normal;
-	normal.xy = fenc * g;
-	normal.z = 1.0 - f / 2.0;
-	return normal;
+	float g = sqrt(1.0 - f * 0.25);
+
+	return vec3(fenc * g, 1.0 - f * 0.5);
 }
 
 float LinearToGamma(float c)
@@ -82,9 +62,9 @@ float Luminance(in vec3 color)
 
 vec3 rand(vec2 coord)
 {
-	float noiseX = saturate(fract(sin(dot(coord, vec2(12.9898, 78.223))) * 43758.5453));
-	float noiseY = saturate(fract(sin(dot(coord, vec2(12.9898, 78.223)*2.0)) * 43758.5453));
-	float noiseZ = saturate(fract(sin(dot(coord, vec2(12.9898, 78.223)*3.0)) * 43758.5453));
+	float noiseX = saturate(fract(sin(dot(coord, vec2(12.9898, 78.223)      )) * 43758.5453));
+	float noiseY = saturate(fract(sin(dot(coord, vec2(12.9898, 78.223) * 2.0)) * 43758.5453));
+	float noiseZ = saturate(fract(sin(dot(coord, vec2(12.9898, 78.223) * 3.0)) * 43758.5453));
 
 	return vec3(noiseX, noiseY, noiseZ);
 }
@@ -102,7 +82,7 @@ vec3 KelvinToRGB(float k)
 vec4 ToSH(float value, vec3 dir)
 {
 	const float PI = 3.14159265359;
-	const float N1 = sqrt(4 * PI / 3);
+	const float N1 = sqrt(4 * PI / 3.0);
 	const float transferl1 = (sqrt(PI) / 3.0) * N1;
 	const float transferl0 = PI;
 
@@ -167,7 +147,7 @@ vec3 NightBrightness = vec3(0.45, 0.6471, 1.0) * mix(0.00025, 0.002, nightVision
 
 float AtmosphereMie = 0.0;
 float AtmosphereDensity = 0.45;
-float AtmosphereDensityFalloff = 0.7;
+float AtmosphereDensityFalloff = 0.9;
 float AtmosphereExtent = 100.0;
 
 // polynomial smooth min (k = 0.1); https://www.iquilezles.org/www/articles/smin/smin.htm

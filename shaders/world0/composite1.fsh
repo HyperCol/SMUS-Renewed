@@ -451,7 +451,7 @@ vec4 	ComputeScreenSpaceRaytrace(vec3 normal, float roughness, float metallic, b
 				++numRefinements;
 			//If refinements run out
 			}
-			else if (diff >= 0 && diff <= error * 4.0f && numRefinements > maxRefinements)
+			else if(diff >= 0.0 && diff <= error * 4.0f && numRefinements > maxRefinements)
 			{
 				finalSampPos = sampPos;
 				break;
@@ -605,13 +605,19 @@ void WaterRefraction(inout vec3 color, MaterialMask mask, vec4 viewPos, vec4 vie
 		}
 		else if (mask.slimeBlock > 0.5)
 		{
-			roughness = 0.5;
+			roughness = 0.375;
 			ior = 0.2000;
 		}
 		ior = ior * 0.125 + 1.0;
 
+		float depth0 = texture2D(depthtex0, texcoord.st).x;
+    	vec3 camDir = normalize(GetViewPosition(texcoord.st, depth0).xyz);
+		vec3 camVec = normalize(refract(camDir, normal, 1.0 / ior));
 
-		vec3 noDataToRefract = GammaToLinear(texture2D(gaux3, texcoord.st + rand(texcoord.st + sin(frameTimeCounter)).xy * roughness * 0.04, 0.0).rgb);
+		vec2 offsCoord = normalize(rand(texcoord.st + sin(frameTimeCounter)) * 2.0 - 1.0).xy;
+			 offsCoord *= roughness * dot(camDir, camVec) * 0.25;
+
+		vec3 noDataToRefract = GammaToLinear(texture2D(gaux3, texcoord.st + offsCoord, 0.0).rgb);
 		vec4 refraction = vec4(noDataToRefract, 1.0);
 		if(isEyeInWater > 0)
 		{

@@ -190,7 +190,7 @@ vec3 GetBloom(vec2 coord)
 void FogScatter(inout vec3 color, in vec3 bloomData)
 {
 	float linearDepth = GetDepthLinear(texcoord.st);
-	float ifIsInWater = saturate(isEyeInWater);
+	float ifIsInWater = saturate(float(isEyeInWater));
 
 	float fogDensity = 0.0125 * rainStrength * (1.0 - ifIsInWater);
 	fogDensity += ifIsInWater * 0.75;
