@@ -1,6 +1,6 @@
 #define AUTHOR sitinpeace
 #define DEV_TEAM HyperCol
-#define VERSION 0.4.2
+#define VERSION 0.4.4
 
 #define saturate(x) clamp(x, 0.0, 1.0)
 
