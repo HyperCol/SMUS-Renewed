@@ -435,8 +435,8 @@ vec4 	ComputeScreenSpaceRaytrace(vec3 normal, float roughness, float metallic, b
 
 			vec2 sampPos = currPos.xy;
 
-			depth = texture2D(depthtex1, sampPos.st).x;
-			float sampDepth = GetViewPosition(sampPos.st, depth).z;
+			float depth1 = texture2D(depthtex1, sampPos.st).x;
+			float sampDepth = GetViewPosition(sampPos.st, depth1).z;
 			float currDepth = camVecPos.z;
 
 			float diff = sampDepth - currDepth;
@@ -449,9 +449,9 @@ vec4 	ComputeScreenSpaceRaytrace(vec3 normal, float roughness, float metallic, b
 				//Step back
 				camVecPos -= camVec / pow(2.0f, numRefinements);
 				++numRefinements;
-		//If refinements run out
+			//If refinements run out
 			}
-			else if (diff >= 0 && diff <= error * 4.0f && numRefinements > maxRefinements || j == 40)
+			else if (diff >= 0 && diff <= error * 4.0f && numRefinements > maxRefinements)
 			{
 				finalSampPos = sampPos;
 				break;
@@ -485,18 +485,13 @@ vec4 	ComputeScreenSpaceRaytrace(vec3 normal, float roughness, float metallic, b
 
 		if (finalSampPos.x >= 0.0 && finalSampPos.y >= 0.0) {
 			color += vec4(GammaToLinear(texture2D(gaux3, finalSampPos).rgb), 1.0);
-/*
-		#ifdef VOLUMETRIC_RAYS
-			vec3 raysData = vec3(texture2D(gaux1, finalSampPos).ba, texture2D(gaux3, finalSampPos).a);
-				 raysData = GammaToLinear(raysData);
-
-			color.rgb += raysData;
-		#endif
-*/
 		}
 	}
 
-    return color / float(samp);
+    color /= float(samp);
+	color.a = min(color.a, 1.0);
+
+	return color;
 }
 
 float RenderSunDisc(vec3 worldDir, vec3 sunDir)

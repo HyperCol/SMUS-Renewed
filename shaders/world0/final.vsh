@@ -22,7 +22,6 @@ varying vec3 upVector;
 varying float timeSunriseSunset;
 varying float timeNoon;
 varying float timeMidnight;
-varying float timeSkyDark;
 
 uniform float eyeAltitude;
 
@@ -81,10 +80,6 @@ void main() {
 	timeMidnight = 1.0 - pow(1.0 - timeMidnight, 2.0);
 	timeSunriseSunset *= 1.0 - timeMidnight;
 	timeNoon *= 1.0 - timeMidnight;
-
-	// timeSkyDark = clamp01(LdotDown);
-	// timeSkyDark = pow(timeSkyDark, 3.0f);
-	timeSkyDark = 0.0f;
 
 
 	float horizonTime = CubicSmooth(clamp01((1.0 - abs(LdotUp)) * 7.0f - 6.0f));

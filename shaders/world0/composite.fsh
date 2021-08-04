@@ -388,25 +388,19 @@ void WaterFog(inout vec3 color, inout vec3 origional, inout vec3 rayColor, Mater
 
 
 		float fogDensity = 0.1;
+		fogDensity *= 0.25 * float(mask.ice);
 
 
 
 		vec3 waterNormal = normalize(normal);
 
 		vec3 waterFogColor = vec3(0.2, 0.6, 1.0) * 7.0;
-			if (mask.ice > 0.5)
-			{
-				//waterFogColor = vec3(0.2, 0.6, 1.0) * 7.0;
-				fogDensity = 0.025;
-			}
-			  waterFogColor *= 0.03 * dot(vec3(0.33333), colorSunlight);
-			  waterFogColor *= (1.0 - rainStrength * 0.95);
+		waterFogColor *= 0.03 * dot(vec3(0.33333), colorSunlight);
+		waterFogColor *= (1.0 - rainStrength * 0.95);
 
 
 		{
 			waterFogColor *= 0.1;
-			//waterFogColor *= pow(eyeBrightnessSmooth.y / 240.0f, 6.0f);
-
 
 			vec3 waterSunlightVector = refract(-lightVector, upVector, 1.0 / 1.3333);
 
@@ -419,8 +413,6 @@ void WaterFog(inout vec3 color, inout vec3 origional, inout vec3 rayColor, Mater
 			waterFogColor *= dot(viewVector, upVector) * 0.5 + 0.5;
 			waterFogColor = waterFogColor + waterSunlightScatter;
 
-
-			//waterFogColor *= pow(vec3(0.4, 0.72, 1.0) * 0.99, vec3(0.2 + (1.0 - eyeWaterDepth)));
 			waterFogColor = mix(waterFogColor, waterFogColor * vec3(0.2, 0.4, 1.0), 1.0 - eyeWaterDepth);
 
 			fogDensity *= 0.5;
@@ -433,7 +425,8 @@ void WaterFog(inout vec3 color, inout vec3 origional, inout vec3 rayColor, Mater
 		vec3 viewVectorRefracted = refract(viewVector, waterNormal, 1.0 / 1.3333);
 		float scatter = 1.0 / (pow(saturate(dot(-lightVector, viewVectorRefracted) * 0.5 + 0.5) * 20.0, 2.0) + 0.1);
 
-		vec3 depthColour = pow(vec3(0.4, 0.75, 1.0) * 0.99, vec3(waterDepth * 0.25 + 0.25));
+		vec3 depthColour = vec3(0.4, 0.75, 1.0) * 0.99;
+			 depthColour = pow(depthColour, vec3(waterDepth * 0.25 + 0.25));
 
 		color *= depthColour;
 		rayColor *= depthColour;

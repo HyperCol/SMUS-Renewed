@@ -292,10 +292,10 @@ void 	MotionBlur(inout vec3 color)
 	previousPosition.xyz /= previousPosition.w;
 
 	float intensity = MOTIONBLUR_STRENGTH * 0.125;
-	vec2 velocity = currentPosition.xy - previousPosition.xy;
+	vec2 velocity = (currentPosition.xy - previousPosition.xy) * intensity;
 
 #ifdef MOTION_BLUR_PVP_MODE
-	float blurAmount = intensity * 0.08;
+	float blurAmount = intensity * 0.25;
 	velocity *= clamp(length(velocity), -blurAmount, blurAmount) / length(velocity);
 #endif
 
@@ -329,15 +329,16 @@ void 	MotionBlur(inout vec3 color)
 void AverageExposure(inout vec3 color)
 {
 	float avglod = log2(min(resolution.x, resolution.y) * 0.625);
+	float brightness_scaler = 1000.0 + timeMidnight * 39000;
 
 	float exposureMax = 16.0;
 	float exposureMin = 0.0;
-	float exposureAvg = 0.375;
+	float exposureAvg = 0.35 + (1.0 - pow(eyeBrightnessSmooth.y / 240.0f, 6.0f)) * 0.25;
 
-	float exposure = Luminance(GammaToLinear(texture2DLod(gaux3, vec2(0.5), avglod).rgb) * 40000.0);
+	float exposure = Luminance(GammaToLinear(texture2DLod(gaux3, vec2(0.5), avglod).rgb) * brightness_scaler);
 		  exposure = clamp(1.0 / exposure, exposureMin, exposureMax);
 
-	color *= exposure * 40000.0 * exposureAvg;
+	color *= exposure * brightness_scaler * exposureAvg;
 }
 
 void 	Vignette(inout vec3 color) {

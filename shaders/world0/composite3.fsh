@@ -106,15 +106,10 @@ vec2 GetNearFragment(vec2 coord, float depth, out float minDepth)
 
 	vec2 targetFragment = vec2(0.0, 0.0);
 
-	if (depthSamples.x < depth)
-		targetFragment = vec2(1.0, 1.0);
-	if (depthSamples.y < depth)
-		targetFragment = vec2(1.0, -1.0);
-	if (depthSamples.z < depth)
-		targetFragment = vec2(-1.0, 1.0);
-	if (depthSamples.w < depth)
-		targetFragment = vec2(-1.0, -1.0);
-
+	if     (depthSamples.w < depth) targetFragment = vec2(-1.0, -1.0);
+	else if(depthSamples.z < depth) targetFragment = vec2(-1.0, 1.0);
+	else if(depthSamples.y < depth) targetFragment = vec2(1.0, -1.0);
+	else if(depthSamples.x < depth) targetFragment = vec2(1.0, 1.0);
 
 	minDepth = min(min(min(depthSamples.x, depthSamples.y), depthSamples.z), depthSamples.w);
 
@@ -180,13 +175,13 @@ vec4 SMAAFitter(sampler2D prevColorBuf, vec2 coord){
 
 	vec2 tc0 = texel * (centerPos - vec2(1.0));
 	vec2 tc3 = texel * (centerPos + vec2(2.0));
-	vec4 color = vec4(texture2D(prevColorBuf, vec2(tc12.x, tc0.y )).rgb, 1.0) * (w12.x * w0.y)  +
+	vec4 color = vec4(texture2D(prevColorBuf, vec2(tc12.x, tc0.y )).rgb, 1.0) * (w12.x * w0.y ) +
 				 vec4(texture2D(prevColorBuf, vec2(tc0.x , tc12.y)).rgb, 1.0) * (w0.x  * w12.y) +
-				 vec4(centerColor.rgb, 1.0)                                       * (w12.x * w12.y) +
+				 vec4(centerColor.rgb                                  , 1.0) * (w12.x * w12.y) +
 				 vec4(texture2D(prevColorBuf, vec2(tc3.x , tc12.y)).rgb, 1.0) * (w3.x  * w12.y) +
-				 vec4(texture2D(prevColorBuf, vec2(tc12.x, tc3.y )).rgb, 1.0) * (w12.x * w3.y);
+				 vec4(texture2D(prevColorBuf, vec2(tc12.x, tc3.y )).rgb, 1.0) * (w12.x * w3.y );
 
-	return vec4(max(vec3(0.0), color.rgb * (1.0 / color.a)), centerColor.a);
+	return vec4(max(vec3(0.0), color.rgb / color.a), centerColor.a);
 }
 
 #define COLORPOW 1.0
@@ -238,7 +233,7 @@ void main() {
 	reprojCoord = depth < 0.7 ? texcoord.st : reprojCoord; 		//Don't reproject hand
 
 	vec2 pixelError = cos((fract(abs(texcoord.st - reprojCoord.xy) * resolution) * 2.0 - 1.0) * 3.14159) * 0.5 + 0.5;
-	vec2 pixelErrorFactor = pow(pixelError, vec2(0.5));
+	vec2 pixelErrorFactor = sqrt(pixelError);
 
 
 	vec4 prevColor = pow(SMAAFitter(gaux4, reprojCoord.st), vec4(COLORPOW, COLORPOW, COLORPOW, 1.0));
@@ -257,31 +252,32 @@ void main() {
 	vec3 m2 = vec3(0.0);
 
 	///*
-	for (int i = -1; i <= 1; i++)
+	for(int count = 0; count < 9; count++)
 	{
-		for (int j = -1; j <= 1; j++)
+		float i = mod(float(count), 3.0) - 1.0;
+		float j = floor(float(count) / 3.0) - 1.0;
+
+		vec2 offs = vec2(i, j) * texel * taaStrength;
+		vec3 samp = pow(texture2D(gaux3, texcoord.xy + offs).rgb, vec3(COLORPOW));
+		minColor = min(minColor, samp);
+		maxColor = max(maxColor, samp);
+		avgColor += samp;
+
+		if (j == 0)
 		{
-			vec2 offs = vec2(float(i), float(j)) * texel * taaStrength;
-			vec3 samp = pow(texture2D(gaux3, texcoord.xy + offs).rgb, vec3(COLORPOW));
-			minColor = min(minColor, samp);
-			maxColor = max(maxColor, samp);
-			avgColor += samp;
-
-			if (j == 0)
-			{
-				avgX += samp;
-			}
-
-			if (i == 0)
-			{
-				avgY += samp;
-			}
-
-			samp = (RGBToYUV(samp));
-
-			m1 += samp;
-			m2 += samp * samp;
+			avgX += samp;
 		}
+
+		if (i == 0)
+		{
+			avgY += samp;
+		}
+
+		samp = (RGBToYUV(samp));
+
+		m1 += samp;
+		m2 += samp * samp;
+
 	}
 	avgColor /= 9.0;
 	avgX /= 3.0;
@@ -305,22 +301,6 @@ void main() {
 	#endif
 #endif
 
-/*
-	if (abs(ExpToLinearDepth(minDepth) - ExpToLinearDepth(prevMinDepth)) > 0.15 * -viewPos.z)
-	{
-		blendWeight = vec3(0.1);
-		colorWindow = 1.0;
-	}
-
-	if (   reprojCoord.x < 0.0
-		|| reprojCoord.x > 1.0
-		|| reprojCoord.y < 0.0
-		|| reprojCoord.y > 1.0)
-	{
-		blendWeight = vec3(1.0);
-	}
-*/
-
 	vec3 mu = m1 / 9.0;
 	vec3 sigma = sqrt(max(vec3(0.0), m2 / 9.0 - mu * mu));
 	vec3 minc = mu - colorWindow * sigma;
@@ -331,8 +311,6 @@ void main() {
 	vec3 sharpen = (vec3(1.0) - exp(-(color - avgColor) * 15.0)) * 0.06;
 	vec3 sharpenX = (vec3(1.0) - exp(-(color - avgX) * 15.0)) * 0.06;
 	vec3 sharpenY = (vec3(1.0) - exp(-(color - avgY) * 15.0)) * 0.06;
-	//color += sharpenX * (0.45 / blendWeight) * pixelErrorFactor.x;
-	//color += sharpenY * (0.45 / blendWeight) * pixelErrorFactor.y;
 	color += sharpenX * (0.1 / blendWeight) * pixelErrorFactor.x;
 	color += sharpenY * (0.1 / blendWeight) * pixelErrorFactor.y;
 
@@ -352,20 +330,12 @@ void main() {
 	blendWeight += vec3(pixelMotionFactor * 0.0);
 
 
-	blendWeight = clamp(blendWeight, vec3(0.0), vec3(1.0));
-
-	//if (depth < 0.7)
-	//{
-	//	blendWeight = vec3(1.0);
-	//	color = origColor;
-	//}
+	blendWeight = saturate(blendWeight);
 
 
 
 	vec3 taa = mix(prevColor.rgb, color, blendWeight);
-
-
-	taa = pow(taa, vec3(1.0 / COLORPOW));
+		 taa = pow(taa, vec3(1.0 / COLORPOW));
 
 	#else
 
