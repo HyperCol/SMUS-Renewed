@@ -17,14 +17,12 @@ steps:
     echo Add other tasks to build, test, and deploy your project.
     echo See https://aka.ms/yaml
   displayName: 'Run a multi-line script'
-- task: ArchiveFiles@2
+- task: CopyFiles@2
   inputs:
-    rootFolderOrFile: '$(System.DefaultWorkingDirectory)'
-    includeRootFolder: false
-    archiveType: 'zip'
-    archiveFile: '$(Build.ArtifactStagingDirectory)/SMUS-Renewed(Build$(Build.BuildId)).zip'
-    replaceExistingArchive: false
+    SourceFolder: '$(System.DefaultWorkingDirectory)'
+    Contents: '**'
+    TargetFolder: '$(Build.ArtifactStagingDirectory)'
 - task: PublishPipelineArtifact@1
   inputs:
     targetPath: $(Build.ArtifactStagingDirectory)
-    artifactName: Build$(Build.BuildId)
+    artifactName: SMUS-Renewed(Build$(Build.BuildId))
