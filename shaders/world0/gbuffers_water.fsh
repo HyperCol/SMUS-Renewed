@@ -36,12 +36,9 @@ Do not modify this code until you have read the LICENSE.txt contained in the roo
 
 
 uniform sampler2D texture;
-uniform sampler2D specular;
 uniform sampler2D normals;
 uniform sampler2D noisetex;
 uniform sampler2D gaux1;
-uniform sampler2D gaux2;
-uniform sampler2D gaux3;
 
 uniform mat4 gbufferProjectionInverse;
 uniform mat4 gbufferPreviousProjection;

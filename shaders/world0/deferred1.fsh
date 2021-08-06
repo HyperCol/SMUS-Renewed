@@ -1319,7 +1319,7 @@ void main()
 	if (skyChecker)
 	{
 
-		float albedoCheck = sign(Luminance(gbuffer.albedo));
+		//float albedoCheck = sign(Luminance(gbuffer.albedo));
 		//vec3 albedoForSky = 1.0 + albedoCheck * (gbuffer.albedo - 1.0);
 		finalComposite += atmosphere * 0.8;
 		//finalComposite += mix(atmosphere, atmosphere * albedoForSky, albedoCheck * 0.5);
@@ -1338,7 +1338,7 @@ void main()
 
 		CloudPlane(finalComposite, viewDir, -worldDir, linearDepth, materialMask, worldLightVector, lightVector, gbuffer.depth);
 
-		worldPos.xyz = worldDir.xyz * 2670.0;
+		//worldPos.xyz = worldDir.xyz * 2670.0;
 	}
 
 	//finalComposite = vec3(saturate(dot(gbuffer.normal, viewDir)));

@@ -1,6 +1,6 @@
 #define AUTHOR sitinpeace
 #define DEV_TEAM HyperCol
-#define VERSION 0.4.4
+#define VERSION 0.4.5
 
 #define saturate(x) clamp(x, 0.0, 1.0)
 
@@ -142,11 +142,11 @@ vec3 FromSH(vec4 cR, vec4 cG, vec4 cB, vec3 lightDir)
 #define HORIZON_THING
 #define SUNLIGHT_BRIGHTNESS 1.0 // Adjusts the relative brightness of sunlight versus sky/ambient light. [0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
 
-vec3 Rayleigh = vec3(0.15, 0.275, 1.0);
+vec3 Rayleigh = vec3(0.10, 0.275, 0.75);
 vec3 NightBrightness = vec3(0.45, 0.6471, 1.0) * mix(0.00025, 0.002, nightVision);
 
 float AtmosphereMie = 0.0;
-float AtmosphereDensity = 0.45;
+float AtmosphereDensity = 0.375;
 float AtmosphereDensityFalloff = 0.9;
 float AtmosphereExtent = 100.0;
 

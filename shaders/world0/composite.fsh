@@ -53,7 +53,6 @@ uniform sampler2D composite;
 uniform sampler2D gaux1;
 uniform sampler2D gaux2;
 uniform sampler2D gaux3;
-uniform sampler2D gaux4;
 uniform sampler2D noisetex;
 
 uniform sampler2D shadowcolor0;
