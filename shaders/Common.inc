@@ -2,6 +2,10 @@
 #define DEV_TEAM HyperCol
 #define VERSION 0.4.5
 
+#if !defined(MC_VERSION) && !defined(MC_GL_VERSION) && !defined(MC_GLSL_VERSION)
+	#error "This shader DOES NOT support Iris shader loader!"
+#else
+
 #define saturate(x) clamp(x, 0.0, 1.0)
 
 vec2 EncodeNormal(vec3 normal)
@@ -393,3 +397,5 @@ void GetSkylightData(vec3 worldSunVector,
 	colorSkylight /= latSamples * lonSamples;
 	//colorSkyUp = SkyShading(vec3(0.0, 1.0, 0.0), worldSunVector);
 }
+
+#endif
